@@ -12,7 +12,7 @@ El bloqueo de `.env` ya se comprobó en la sesión del 13-11. Falta solo esto:
 
 ## 2. Primer commit y repositorio privado (F0-1)
 
-- [ ] Ejecutar los comandos del bloque "COMMIT: F0-1" que entregó Claude Code (incluye crear el repo privado `gmgrepuestos-web` en GitHub y la rama `develop`).
+- [x] Hecho el 14-11 (repo privado en GitHub con `main` y `develop`). Ejecutar los comandos del bloque "COMMIT: F0-1" que entregó Claude Code (incluye crear el repo privado `gmgrepuestos-web` en GitHub y la rama `develop`).
 
 ## 3. PHP 8 y MariaDB en el computador (preparación)
 
@@ -46,3 +46,77 @@ Claude Code no puede crear ni leer `.env` (lo bloquea la regla de `.claude/setti
   Si esa carpeta ya no existe: copia `.env.example` como `.env` y deja `APP_ENV=pruebas`, `SITE_URL=http://localhost:8000`, `DB_HOST=localhost`, `DB_USER=root`, `DB_PASS=` (vacío) y `DB_NAME=gmg_local`.
 - [ ] 2. Clave de OpenAI de pruebas: en https://platform.openai.com entra a Settings, Projects, "Create project" con el nombre `gmg-pruebas`. Dentro de ese proyecto, en Limits, fija un presupuesto mensual bajo (por ejemplo 5 USD). Luego en API keys, "Create new secret key" para ese proyecto, ábrela en el `.env` del proyecto y pégala en `AI_API_KEY=`. Si quieres, pon también el número de la tienda en `WHATSAPP_NUMBER=` (569XXXXXXXX).
 - [ ] 3. Avísale a Claude Code: "listo .env local". Claude Code levantará `php -S localhost:8000` y probará el sitio con ese archivo, sin leerlo.
+
+## 7. Claves nuevas en producción (F0-2, URGENTE)
+
+Por qué: el repo público del profe tiene `GmgRepuestos.zip` con el `.env` real y un volcado con los hashes de los administradores. Aunque se borren (sección 8), siguen en el historial de GitHub y cualquiera puede descargarlos. Hay que cambiar todo.
+Hazlo en este orden: el sitio sigue funcionando entre un paso y otro (salvo un minuto en el paso B).
+
+**A. Sacar el `.env` de `public_html`**
+
+Hecho y probado el 14-11 (capturas de Vicente): el `.env` quedó junto a `public_html` y a `DO_NOT_UPLOAD_HERE`; la tienda carga (si el código no lo encontrara, mostraría "El sitio no está disponible"); `/.env` responde 403 Forbidden.
+El 403 no indica que quede una copia: Apache responde 403 a cualquier nombre bloqueado aunque el archivo no exista (probado en local con `/.no-existe-xyz`). Para estar seguro, revisa que `public_html` no tenga un `.env` con "Mostrar archivos ocultos" activado.
+
+- [x] 1. hPanel > Sitios web > Administrar (gmgrepuestos.cl) > Archivos > Administrador de archivos.
+- [x] 2. Entra por `domains` > `gmgrepuestos.cl` > `public_html`. Si no ves `.env`, activa "Mostrar archivos ocultos" en la configuración del administrador.
+- [x] 3. Clic derecho en `.env` > Mover. Destino: `domains/gmgrepuestos.cl/` (la carpeta que contiene a `public_html`). No lo muevas a la carpeta inicial `/home/...`: el código lo busca justo una carpeta arriba de `public_html`.
+- [x] 4. Abre https://gmgrepuestos.cl : la tienda debe mostrar productos. Si dice "El sitio no está disponible", devuelve el `.env` a `public_html` (sigue protegido por `.htaccess`) y avísale a Claude Code.
+- [x] 5. Abre https://gmgrepuestos.cl/.env : debe responder 404 o 403 (CP-47). Toma captura para la evidencia.
+
+En los pasos siguientes, "editar el `.env`" es: Administrador de archivos > `domains/gmgrepuestos.cl/.env` > clic derecho > Editar > cambiar la línea > Guardar.
+
+**B. Contraseña de la base de datos** (no se rota por ahora: decisión de Vicente del 14-11, no hay datos reales. Se retoma en F5-5, antes de operar con clientes)
+
+- [ ] 1. hPanel > Bases de datos > Bases de datos MySQL. En la base del sitio, menú de tres puntos > Cambiar contraseña. Usa el generador de Hostinger y copia la contraseña.
+- [ ] 2. De inmediato, edita el `.env`: `DB_PASS=<nueva>`. Entre el paso 1 y este el sitio no conecta, así que hazlo en menos de un minuto.
+- [ ] 3. Recarga la tienda: debe mostrar productos.
+
+**C. Clave de OpenAI (producción)**
+
+- [x] 1. Hecho el 14-11. https://platform.openai.com > el proyecto que usa el sitio > API keys > Create new secret key. Cópiala.
+- [x] 2. Hecho el 14-11. Edita el `.env`: `AI_API_KEY=<nueva>`.
+- [ ] 3. Inicia sesión en https://gmgrepuestos.cl/admin y, en la misma pestaña del navegador, escribe al chat "pastillas de freno para Swift 2019". Con sesión de administrador la respuesta muestra `[DEBUG]` si hay error. Si dice `HTTP 401`, la clave quedó mal pegada. Cualquier otro error se arregla en la Fase 1; anótalo y pásaselo a Claude Code (es la tarea F1-1).
+- [ ] 4. IMPORTANTE: vuelve a API keys y presiona "Revoke" en la clave antigua (la de fecha de creación más antigua). Sin esto la clave filtrada sigue funcionando.
+
+**D. Mercado Pago (el código no se toca, pero el token se filtró)** (no se rota por ahora: decisión del 14-11; se retoma en F5-5)
+
+- [ ] 1. https://www.mercadopago.cl/developers/panel/app > tu aplicación > Credenciales de producción. Usa la opción para renovar el Access Token. Si no aparece, crea una aplicación nueva y usa sus credenciales de producción (si la anterior tenía URL de notificaciones configurada, ponla igual en la nueva).
+- [ ] 2. Edita el `.env`: `MP_ACCESS_TOKEN=<nuevo>` y, si cambió, `MP_PUBLIC_KEY=<nueva>`.
+- [ ] 3. Prueba: agrega un repuesto al carrito, completa el checkout hasta que se abra la página de Mercado Pago y ciérrala sin pagar.
+
+**E. Contraseña del correo (SMTP)** (no se rota por ahora: decisión del 14-11; se retoma en F5-5. Es la que más conviene adelantar: con ella se puede enviar spam desde el dominio aunque la tienda no tenga datos reales)
+
+- [ ] 1. hPanel > Correos electrónicos > Cuentas de correo > en la cuenta que usa el sitio para enviar (la de `SMTP_USER`, normalmente Ventas@gmgrepuestos.cl) > tres puntos > Cambiar contraseña.
+- [ ] 2. Edita el `.env`: `SMTP_PASS=<nueva>`.
+- [ ] 3. Cambia también la contraseña en el celular u Outlook donde se lee ese correo. El envío desde el sitio se prueba en F3-9 y F4-6.
+
+**F. Contraseñas de los administradores (rodolfo, vicente, martin)** (no se cambian por ahora: decisión del 14-11; se retoma en F5-5)
+
+Probado en local el 14-11: con el hash nuevo la clave antigua deja de funcionar y la nueva entra al panel.
+
+- [ ] 1. En la terminal de VS Code ejecuta:
+  ```powershell
+  php -r "echo password_hash(trim(fgets(STDIN)), PASSWORD_DEFAULT), PHP_EOL;"
+  ```
+  Escribe la contraseña nueva y presiona Enter (se ve en pantalla, pero no queda en el historial). Copia la línea que empieza con `$2y$`.
+- [ ] 2. phpMyAdmin de producción > base del sitio > pestaña SQL:
+  ```sql
+  UPDATE administradores SET password_hash = 'PEGA_AQUI_EL_HASH' WHERE usuario = 'vicente';
+  ```
+- [ ] 3. Repite 1 y 2 para `martin` y `rodolfo`, cada uno con su propia contraseña. Entrégalas por mensaje privado, no por el grupo.
+- [ ] 4. Prueba: entra a https://gmgrepuestos.cl/admin con la contraseña nueva; la antigua debe fallar.
+
+**G. Cierre**
+
+- [ ] 1. Descarga el `.env` nuevo del servidor (clic derecho > Descargar) y reemplaza con él `C:\Users\santi\Documents\gmg-produccion.env`, que hoy tiene las claves antiguas. Nunca lo pongas dentro de la carpeta del proyecto.
+- [ ] 2. Avísale a Claude Code: "clave de OpenAI rotada", con el resultado de C.3 y confirmando C.4.
+
+## 8. Repositorio del profe (sección 4 de las instrucciones, URGENTE)
+
+- [ ] 1. En la terminal, desde el Escritorio:
+  ```powershell
+  cd C:\Users\santi\Desktop
+  git clone https://github.com/mnunezt14/GmgRepuestos.git GmgRepuestos-evidencias
+  ```
+- [ ] 2. En Claude Code: `/add-dir ../GmgRepuestos-evidencias`
+- [ ] 3. Avísale a Claude Code: "repo del profe listo". Claude Code ordena las carpetas y saca el zip y el volcado sin usar Git, y te entrega los comandos del commit.
