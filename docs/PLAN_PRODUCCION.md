@@ -40,17 +40,22 @@ Fuera de alcance: pasarela Mercado Pago (E4-H1, E4-H2, E4-H5, INC-09, INC-11).
   Decisión del Product Owner (14-11): por ahora solo se rota la clave de OpenAI (hecho el 14-11 en el `.env` del servidor), porque la base, Mercado Pago y el correo no tienen datos reales. La contraseña de la base, el token de Mercado Pago, la contraseña SMTP y las de los 3 administradores se rotan en F5-5, antes de operar con clientes. Riesgo aceptado: la contraseña SMTP filtrada permite enviar correo desde el dominio.
   Se marca `[x]` cuando Vicente confirme que revocó la clave antigua de OpenAI (C.4) y que el chat responde sin `HTTP 401` (C.3).
   Ojo: `BD_v2/03_datos_iniciales.sql` copia los mismos hashes de administrador que tiene el volcado público; además de las 4 claves, hay que cambiar las contraseñas de `rodolfo`, `vicente` y `martin`.
-- [ ] **F0-3 Script de tablas del panel** (INC-12, E5-H9, E4-H4, E10-H7). Crear `BD_v2/05_tablas_panel.sql` con `base_conocimiento`, `intentos_pago` y `auditoria`. Primero pedir a Vicente el `CREATE TABLE` exportado desde phpMyAdmin de producción; si no existen, deducir columnas leyendo `backend/conocimiento.php`, `admin/conocimiento.php`, `backend/pagos.php`, `admin/pagos.php` y `backend/auditoria.php`. Incluir `limites_solicitudes` (ver `docs/FIX_ASISTENTE_IA.md`).
+- [x] **F0-3 Script de tablas del panel** (INC-12, E5-H9, E4-H4, E10-H7). Crear `BD_v2/05_tablas_panel.sql` con `base_conocimiento`, `intentos_pago` y `auditoria`. Primero pedir a Vicente el `CREATE TABLE` exportado desde phpMyAdmin de producción; si no existen, deducir columnas leyendo `backend/conocimiento.php`, `admin/conocimiento.php`, `backend/pagos.php`, `admin/pagos.php` y `backend/auditoria.php`. Incluir `limites_solicitudes` (ver `docs/FIX_ASISTENTE_IA.md`).
   Listo cuando: una base vacía cargada con 01 a 05 levanta el sitio y el panel sin errores en el log.
+  Probado (14-11): estructura tomada de la exportación de producción de Vicente. (1) Base nueva con 01 a 05: sin errores, 21 tablas. (2) 05 ejecutado 2 veces: sin errores ni cambios. (3) Base con la estructura exportada de producción: 05 solo crea `limites_solicitudes` y no toca los textos existentes. (4) `SHOW CREATE TABLE` de las 3 tablas idéntico al de producción. (5) Sitio con esa base nueva: 12 páginas públicas y 8 del panel responden 200; los botones rápidos del chat (despacho y pagos) responden con `base_conocimiento`; guardar un texto en el panel escribe en `base_conocimiento` y `auditoria`; el mismo POST sin token CSRF se rechaza; registro de PHP vacío. Aplicado también a `gmg_local`.
+  En producción: ejecutar 05 (ACCIÓN TUYA, `docs/PENDIENTES_VICENTE.md` punto 9). Solo agrega `limites_solicitudes`.
 - [ ] **F0-4 CSRF en el panel** (INC-04, E10-H2, E6-H1, E6-H4, E6-H7, E6-H10). En `admin/productos.php`, `pedidos.php`, `codigos.php` y `avisos.php`: cargar `backend/admin_ui.php` al inicio, rechazar todo `POST` sin `gmgCsrfValido()` y agregar `gmgCsrfCampo()` a cada `<form method="post">`.
   Listo cuando: CP-42 exitoso (un POST desde otra página no cambia nada).
 - [ ] **F0-5 `.htaccess`** (CP-47). Bloquear `arquitectura`, `tests` y `.claude` junto a `BD_v2` y `docs`; quitar `parches_opcionales` y la entrada `arquitectura` de `backend/.htaccess`.
   Línea base medida el 14-11 con Apache local: `/arquitectura/`, `/tests/apache/httpd-gmg.conf`, `/.claude/settings.json`, `/.git/HEAD` y `/.git/config` responden 200. Agregar también `.git` (existe desde F0-1; en el hosting no debería subirse, pero el bloqueo no cuesta nada). Probar con `tests/apache/httpd-gmg.conf`.
 - [ ] **F0-6 Caché del CSS del panel** (E10-H8). Reemplazar `?v=<?php echo time(); ?>` (12 lugares en `admin/` y `login.php`) por la función `gmgVersionArchivo()` que ya usan las páginas públicas (`backend/pagina_publica.php`).
 - [ ] **F0-7 Datos reales** (EV-*, E2-H6). Con Vicente: confirmar en producción `SELECT COUNT(*), SUM(stock > 0) FROM repuestos WHERE activo = 1;`. Si todo está en 0, cargar stock real (aunque sea con un `UPDATE` por SKU) y los `codigo_oem` que GMG entregue. Cargar textos reales en el panel "Asistente".
+  Visto en la exportación del 14-11: en producción, horario, dirección ("Av. Providencia 1234"), teléfono ("+56 9 1234 5678") y correo son los textos de ejemplo del panel (`gmgTemasConocimiento()`), y el chat y la página Contacto los muestran como reales. Reemplazarlos por los de GMG o dejarlos vacíos (vacío = el chat ofrece WhatsApp).
 - [ ] **F0-8 Skills instaladas** (ver sección "Skills" al final). Verificar con `/ponytail-help` y que `/emil-design-eng` aparezca al escribir `/`.
 
 **Puerta de salida:** CP-42 y CP-47 exitosos, claves rotadas, Git funcionando.
+
+Decisión del Product Owner (14-11): la sección 4 de `docs/INSTRUCCIONES_CLAUDE_CODE.md` (ordenar el repo de evidencias `mnunezt14/GmgRepuestos`) queda descartada. El repo es del equipo, el profe ya revisó Fases 1 y 2 y están bien. Prioridad única: completar el desarrollo (Fases 0 a 5 de este plan) para la entrega 3. En GitHub no se cambió nada; el clon local reordenado lo borra Vicente (`docs/PENDIENTES_VICENTE.md`, punto 8).
 
 ---
 
@@ -136,7 +141,7 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 - [ ] **F5-3 OWASP ZAP** (escaneo base) sin hallazgos de riesgo alto.
 - [ ] **F5-4 Operación** (E7-H5, E10-H9, E10-H10, E10-H1, E9-H2). SPF, DKIM y DMARC; respaldo diario y prueba de restauración documentada; monitor de disponibilidad; capturas de HTTPS y de los 5 navegadores.
 - [ ] **F5-5 Producción limpia.** Borrar datos DEMO; usuario de BD con permisos mínimos; `APP_ENV=produccion`; `CHAT_DEBUG` en `false`.
-  Además (decisión del 14-11 en F0-2): rotar la contraseña de la base, el token de Mercado Pago, la contraseña SMTP y las contraseñas de `rodolfo`, `vicente` y `martin`, que están filtradas en el historial del repo del profe. Pasos en `docs/PENDIENTES_VICENTE.md`, punto 7 (B, D, E y F).
+  Además (decisión del 14-11 en F0-2): rotar la contraseña de la base, el token de Mercado Pago, la contraseña SMTP y las contraseñas de `rodolfo`, `vicente` y `martin`, que están publicadas en el repo de evidencias (zip y volcado de Fase 2). Pasos en `docs/PENDIENTES_VICENTE.md`, punto 7 (B, D, E y F).
 - [ ] **F5-6 Despliegue.** Subir solo lo público (excluir `.claude/`, `CLAUDE.md`, `docs/`, `BD_v2/`, `arquitectura/`, `tests/`, `.git/`). Probar la vuelta atrás.
 - [ ] **F5-7 Documentación.** Actualizar estados del Product Backlog, completar Responsable y A/R en las validaciones, actualizar el DAS 4+1 y el manual del panel.
 - [ ] **F5-8 UAT** con GMG Repuestos y acta firmada.
@@ -154,6 +159,7 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 ## Hallazgos fuera de tarea (anotados, no corregidos)
 
 - `backend/entorno.php` línea 72: el mensaje del log cita `docs/procedimiento_de_despliegue.md`, que no existe. Corregir cuando se escriba la guía de despliegue (F5-6).
+- `backend/auditoria.php` (comentario y línea 55) y `backend/pagos.php` (líneas 11, 124 y 139) mandan a ejecutar `BD_v2/06_sprint1a4_tablas_nuevas.sql` y un "script 07" (candado opcional de `auditoria`), que no existen: esas tablas ahora están en `05_tablas_panel.sql`. Cambiar el texto en `auditoria.php` la próxima vez que se toque; `pagos.php` solo si Mercado Pago entra al alcance. No se sabe si producción tiene el candado (trigger); se puede revisar con `SHOW TRIGGERS LIKE 'auditoria';`.
 - Ambiente local listo (13-11): XAMPP 8.3.36 con PHP 8.3 y MariaDB 10.11.16 en `C:\xampp`, base `gmg_local` cargada con 01 a 04. Probado con `php -S localhost:8000`: las 14 páginas y endpoints públicos responden 200 sin errores de PHP y `/admin/` redirige al login. El único error del log es la tabla `base_conocimiento`, que no existe (15 avisos desde `backend/conocimiento.php:46`): confirma INC-12 y se resuelve en F0-3. Falta que Vicente copie el `.env` local (`docs/PENDIENTES_VICENTE.md`, punto 6).
 - La regla `deny` de `.env` también impide a Claude Code escribirlo; por eso el `.env` local lo copia Vicente.
 

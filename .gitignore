@@ -31,3 +31,6 @@ CLAUDE.local.md
 # Carpetas generadas (copias de trabajo y paquete para el hosting)
 Claude outputs/
 dist/
+
+# Repo de evidencias del equipo: si se clona, va en el Escritorio, al lado de esta carpeta, nunca adentro
+GmgRepuestos-evidencias/

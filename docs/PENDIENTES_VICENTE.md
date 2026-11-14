@@ -49,7 +49,7 @@ Claude Code no puede crear ni leer `.env` (lo bloquea la regla de `.claude/setti
 
 ## 7. Claves nuevas en producción (F0-2, URGENTE)
 
-Por qué: el repo público del profe tiene `GmgRepuestos.zip` con el `.env` real y un volcado con los hashes de los administradores. Aunque se borren (sección 8), siguen en el historial de GitHub y cualquiera puede descargarlos. Hay que cambiar todo.
+Por qué: el repo público de evidencias (`mnunezt14/GmgRepuestos`) tiene `GmgRepuestos.zip` con el `.env` real y un volcado con los hashes de los administradores; cualquiera puede descargarlos.
 Hazlo en este orden: el sitio sigue funcionando entre un paso y otro (salvo un minuto en el paso B).
 
 **A. Sacar el `.env` de `public_html`**
@@ -111,12 +111,26 @@ Probado en local el 14-11: con el hash nuevo la clave antigua deja de funcionar 
 - [ ] 1. Descarga el `.env` nuevo del servidor (clic derecho > Descargar) y reemplaza con él `C:\Users\santi\Documents\gmg-produccion.env`, que hoy tiene las claves antiguas. Nunca lo pongas dentro de la carpeta del proyecto.
 - [ ] 2. Avísale a Claude Code: "clave de OpenAI rotada", con el resultado de C.3 y confirmando C.4.
 
-## 8. Repositorio del profe (sección 4 de las instrucciones, URGENTE)
+## 8. Repositorio de evidencias `GmgRepuestos` (del equipo, lo revisa el profe)
 
-- [ ] 1. En la terminal, desde el Escritorio:
-  ```powershell
-  cd C:\Users\santi\Desktop
-  git clone https://github.com/mnunezt14/GmgRepuestos.git GmgRepuestos-evidencias
-  ```
-- [ ] 2. En Claude Code: `/add-dir ../GmgRepuestos-evidencias`
-- [ ] 3. Avísale a Claude Code: "repo del profe listo". Claude Code ordena las carpetas y saca el zip y el volcado sin usar Git, y te entrega los comandos del commit.
+Decisión de Vicente (14-11): no se reordena. Fases 1 y 2 ya las revisó el profe y están bien; el foco es terminar el desarrollo para la entrega 3. En GitHub no se cambió nada.
+
+- [ ] 1. Borra la carpeta `C:\Users\santi\Desktop\GmgRepuestos-evidencias` (clic derecho > Eliminar). Es un clon local que Claude Code reordenó antes de esta decisión, sin commits ni `push`; GitHub sigue intacto. Claude Code no pudo borrarla porque la regla de seguridad bloquea ese borrado. No hagas `git add` ni `commit` dentro de esa carpeta. Si más adelante necesitas el repo, vuelve a clonarlo en el Escritorio (nunca dentro de `Gmgrepuestos`).
+- [ ] 2. Opcional: el repo público sigue teniendo `Fase 2/Evidencias de proyecto/Codigo/GmgRepuestos.zip` (con el `.env` antiguo) y `u118470389_PruebaHpanel.sql` (hashes de los administradores). La clave de OpenAI ya se rotó; el resto se rota en F5-5.
+
+## 9. Ejecutar `BD_v2/05_tablas_panel.sql` en producción (F0-3)
+
+Es seguro: probado en local contra una copia de la estructura de producción. Solo crea la tabla nueva `limites_solicitudes`; las 3 tablas que ya existen y los textos del panel "Asistente" no se tocan.
+
+- [ ] 1. phpMyAdmin de producción > selecciona la base del sitio (columna izquierda).
+- [ ] 2. Pestaña "Importar" > "Seleccionar archivo" > `C:\Users\santi\Desktop\Gmgrepuestos\BD_v2\05_tablas_panel.sql` > botón "Importar" (abajo).
+- [ ] 3. Debe terminar en verde. Si aparecen avisos de "Table already exists", es lo esperado.
+- [ ] 4. Pestaña SQL, ejecuta `SHOW TABLES LIKE 'limites_solicitudes';`: debe salir 1 fila.
+
+## 10. Textos reales del asistente (F0-7)
+
+En producción, horario, dirección ("Av. Providencia 1234"), teléfono ("+56 9 1234 5678") y correo ("contacto@gmgrepuestos.cl") son los textos de ejemplo del panel. Hoy el chat y la página Contacto se los dan a los clientes como si fueran reales.
+
+- [ ] 1. Pídele a GMG su horario, dirección, teléfono y correo de contacto reales.
+- [ ] 2. https://gmgrepuestos.cl/admin > menú "Asistente" > reemplaza esos 4 campos > Guardar. Si todavía no tienes un dato, deja el campo vacío: así el chat dice que no lo tiene y ofrece WhatsApp, en vez de dar uno falso.
+- [ ] 3. Revisa https://gmgrepuestos.cl/contacto.php: debe mostrar los datos nuevos.
