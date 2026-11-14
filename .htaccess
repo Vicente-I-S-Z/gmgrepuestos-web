@@ -1,0 +1,56 @@
+# =====================================================================
+#  GMG Repuestos - reglas generales del sitio (Hostinger: LiteSpeed/Apache)
+#
+#  Este archivo va en la carpeta principal del sitio (public_html).
+#  Hace cuatro cosas:
+#    1) Obliga a usar HTTPS (candado de seguridad) en todo el sitio.
+#    2) Agrega las cabeceras de seguridad del navegador.
+#    3) Bloquea el acceso por internet a archivos internos (claves, bases
+#       de datos, documentos, registros).
+#    4) Evita que se pueda listar el contenido de las carpetas.
+#
+#  IMPORTANTE: para que la redirección a HTTPS funcione, primero hay que
+#  activar el certificado SSL en hPanel (Seguridad > SSL). El sitio también
+#  hace la misma redirección desde PHP como respaldo.
+# =====================================================================
+
+# 4) Nadie puede ver el listado de archivos de una carpeta.
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1) HTTPS obligatorio (redirección permanente). No se aplica cuando se
+    #    prueba en el computador (localhost) ni cuando el servidor ya recibió
+    #    la visita por HTTPS a través de un intermediario.
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # 3) Carpetas internas que nunca deben abrirse desde internet.
+    RewriteRule ^(BD_v2|docs|parches_opcionales|backend/parciales)(/|$) - [F,L,NC]
+</IfModule>
+
+# 2) Cabeceras de seguridad. (El sitio también las envía desde PHP; si ya
+#    estaban puestas, estas líneas simplemente las reemplazan sin duplicarlas.)
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # El navegador recordará durante 1 año que este sitio solo se abre con HTTPS.
+    Header set Strict-Transport-Security "max-age=31536000" env=HTTPS
+</IfModule>
+
+# 3) Archivos que no se pueden descargar desde internet: claves (.env),
+#    scripts y volcados de base de datos, documentos de trabajo, registros,
+#    respaldos y archivos ocultos.
+<FilesMatch "(?i)(^\.|\.(env|sql|md|log|bak|old|tmp|csv|ini|sh|yml|yaml|lock|dist|example|docx|xlsx)$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

@@ -1,0 +1,33 @@
+# Credenciales (nunca subir)
+.env
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Respaldos y temporales
+*.bak
+*.old
+*.tmp
+*~
+*.zip
+
+# Logs y archivos de diagnóstico
+error_log
+*.log
+storage/logs/
+phpinfo.php
+test.php
+
+# Volcados de base de datos con datos reales
+*_dump.sql
+BD_actual*.sql
+
+# Configuración local de Claude Code (personal, no se comparte)
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Carpetas generadas (copias de trabajo y paquete para el hosting)
+Claude outputs/
+dist/

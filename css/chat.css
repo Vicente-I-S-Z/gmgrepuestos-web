@@ -1,0 +1,663 @@
+/* ============================================================
+   Widget de Chatbot IA - GMG Repuestos
+   ============================================================ */
+
+/* 1. Botón Flotante del Chat */
+.gmg-chat-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 62px;
+    height: 62px;
+    background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+    color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 8px 24px rgba(211, 47, 47, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+    border: 2px solid #ffffff;
+}
+
+.gmg-chat-toggle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 12px 28px rgba(211, 47, 47, 0.5);
+}
+
+.gmg-chat-toggle svg {
+    width: 30px;
+    height: 30px;
+    fill: currentColor;
+    transition: transform 0.2s;
+}
+
+.gmg-chat-toggle .chat-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    background-color: #25D366;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+}
+
+/* 2. Contenedor de la Ventana del Chat */
+.gmg-chat-window {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    width: 380px;
+    max-width: calc(100vw - 32px);
+    height: 560px;
+    max-height: calc(100vh - 120px);
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px) scale(0.95);
+    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), pointer-events 0.25s;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.gmg-chat-window.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0) scale(1);
+}
+
+/* 3. Encabezado del Chat */
+.gmg-chat-header {
+    background: #111111;
+    color: #ffffff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #D32F2F;
+}
+
+.gmg-chat-header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.gmg-chat-avatar {
+    width: 40px;
+    height: 40px;
+    background: #D32F2F;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.gmg-chat-title h4 {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: 0.3px;
+}
+
+.gmg-chat-title p {
+    font-size: 0.75rem;
+    color: #25D366;
+    margin: 2px 0 0 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.gmg-chat-title p::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background-color: #25D366;
+    border-radius: 50%;
+}
+
+.gmg-chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.gmg-chat-close-btn {
+    background: transparent;
+    border: none;
+    color: #aaaaaa;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.gmg-chat-close-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #ffffff;
+}
+
+/* 4. Cuerpo de Mensajes */
+.gmg-chat-messages {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Barra de desplazamiento delgada y sin flechas. Chrome, Edge y Safari usan
+   ::-webkit-scrollbar; Firefox usa las propiedades estándar. */
+@supports not selector(::-webkit-scrollbar) {
+    .gmg-chat-messages {
+        scrollbar-width: thin;
+        scrollbar-color: #c4cad2 transparent;
+    }
+}
+.gmg-chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+.gmg-chat-messages::-webkit-scrollbar-button {
+    display: none;
+}
+.gmg-chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+.gmg-chat-messages::-webkit-scrollbar-thumb {
+    background: #c4cad2;
+    border-radius: 3px;
+}
+
+.gmg-msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+    animation: fadeInMsg 0.25s ease-out;
+}
+
+@keyframes fadeInMsg {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.gmg-msg-user {
+    align-self: flex-end;
+}
+
+.gmg-msg-bot {
+    align-self: flex-start;
+}
+
+.gmg-msg-bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.gmg-msg-user .gmg-msg-bubble {
+    background-color: #111111;
+    color: #ffffff;
+    border-bottom-right-radius: 4px;
+}
+
+.gmg-msg-bot .gmg-msg-bubble {
+    background-color: #ffffff;
+    color: #222222;
+    border: 1px solid #e0e0e0;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.gmg-msg-bubble p {
+    margin: 0 0 6px 0;
+}
+.gmg-msg-bubble p:last-child {
+    margin-bottom: 0;
+}
+
+.gmg-msg-bubble strong {
+    color: #111111;
+}
+.gmg-msg-user .gmg-msg-bubble strong {
+    color: #ffffff;
+}
+
+.gmg-msg-time {
+    font-size: 0.68rem;
+    color: #888888;
+    margin-top: 3px;
+    padding: 0 4px;
+}
+.gmg-msg-user .gmg-msg-time {
+    text-align: right;
+}
+
+/* Tarjetas de Producto dentro del Chat */
+.gmg-chat-products {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gmg-chat-product-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.gmg-chat-product-img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #f1f5f9;
+}
+
+.gmg-chat-product-details {
+    flex: 1;
+}
+
+.gmg-chat-product-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #111111;
+    margin-bottom: 2px;
+}
+
+.gmg-chat-product-meta {
+    font-size: 0.72rem;
+    color: #666666;
+    margin-bottom: 4px;
+}
+
+.gmg-chat-product-price {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #D32F2F;
+}
+
+.gmg-chat-btn-wa-mini {
+    background-color: #25D366;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: bold;
+    padding: 5px 8px;
+    border-radius: 5px;
+    display: inline-block;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.gmg-chat-btn-wa-mini:hover {
+    background-color: #1ebd5a;
+}
+
+/* Indicador de "Escribiendo..." */
+.gmg-typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 14px;
+    border-bottom-left-radius: 4px;
+    width: fit-content;
+}
+
+.gmg-typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: #999999;
+    border-radius: 50%;
+    animation: typingBounce 1.2s infinite ease-in-out;
+}
+
+.gmg-typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.gmg-typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+}
+
+/* 5. Sugerencias Rápidas */
+.gmg-quick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 16px 10px 16px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.gmg-chip {
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 0.74rem;
+    color: #333333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gmg-chip:hover {
+    background: #D32F2F;
+    color: #ffffff;
+    border-color: #D32F2F;
+}
+
+/* 6. Previsualización de Imágenes Adjuntas (hasta 3) */
+.gmg-chat-image-preview-bar {
+    display: none;
+    padding: 8px 16px;
+    background: #f1f3f5;
+    border-top: 1px solid #e2e8f0;
+}
+
+.gmg-chat-image-preview-bar.has-images {
+    display: block;
+}
+
+.gmg-chat-preview-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.gmg-chat-preview-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 3px 6px;
+}
+
+.gmg-chat-preview-thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.gmg-chat-preview-name {
+    font-size: 0.72rem;
+    color: #444444;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gmg-chat-preview-remove {
+    background: none;
+    border: none;
+    color: #D32F2F;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+/* 7. Barra de Entrada de Mensaje */
+.gmg-chat-footer {
+    padding: 10px 14px;
+    background: #ffffff;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gmg-chat-file-btn {
+    background: none;
+    border: none;
+    color: #666666;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.gmg-chat-file-btn:hover {
+    background: #f1f3f5;
+    color: #D32F2F;
+}
+
+.gmg-chat-input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 20px;
+    padding: 9px 14px;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.gmg-chat-input:focus {
+    border-color: #D32F2F;
+    box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.15);
+}
+
+.gmg-chat-send-btn {
+    background: #D32F2F;
+    color: #ffffff;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.gmg-chat-send-btn:hover {
+    background: #b71c1c;
+}
+
+.gmg-chat-send-btn:active {
+    transform: scale(0.95);
+}
+
+.gmg-chat-send-btn svg {
+    width: 17px;
+    height: 17px;
+    fill: currentColor;
+    margin-left: 2px;
+}
+
+/* Mensaje con foto(s) adjunta(s) por el usuario */
+.gmg-msg-image-user {
+    max-width: 140px;
+    border-radius: 8px;
+    margin: 0 4px 6px 0;
+    display: inline-block;
+}
+
+.gmg-msg-images-user {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* Botón de dictado por voz */
+.gmg-chat-mic-btn.is-listening {
+    color: #ffffff;
+    background: #D32F2F;
+    animation: gmgMicPulse 1.2s infinite;
+}
+
+@keyframes gmgMicPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(211,47,47,0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(211,47,47,0); }
+}
+
+/* Feedback (👍/👎) sobre respuestas del Asistente */
+.gmg-msg-feedback {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 0 2px;
+}
+
+.gmg-feedback-btn {
+    background: none;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    color: #888;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.gmg-feedback-btn:hover {
+    background: #f1f3f5;
+}
+
+.gmg-feedback-btn.is-selected {
+    border-color: #D32F2F;
+    background: #fdeceb;
+    color: #D32F2F;
+}
+
+.gmg-feedback-btn:disabled {
+    cursor: default;
+}
+
+/* Burbuja proactiva (invitación a chatear tras inactividad o carrito
+   abandonado) que aparece junto al botón flotante cuando el chat está
+   cerrado. */
+.gmg-chat-proactive-bubble {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    max-width: 240px;
+    background: #ffffff;
+    color: #222222;
+    border-radius: 14px;
+    border-bottom-right-radius: 4px;
+    padding: 12px 14px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    z-index: 9998;
+    cursor: pointer;
+    animation: fadeInMsg 0.3s ease-out;
+    border: 1px solid #e0e0e0;
+}
+
+.gmg-chat-proactive-bubble .gmg-proactive-close {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    background: #111111;
+    color: #ffffff;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+/* Responsividad para móviles (E9-H3): en pantallas de menos de 768 px el chat
+   ocupa toda la pantalla. La altura usa "dvh" (la parte realmente visible,
+   que se achica cuando aparece el teclado); el script del chat la ajusta
+   además con visualViewport para los navegadores que no entienden "dvh". */
+@media (max-width: 767px) {
+    .gmg-chat-window {
+        right: 0;
+        bottom: 0;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        max-width: 100vw;
+        max-height: 100vh;
+        max-height: 100dvh;
+        border-radius: 0;
+    }
+    .gmg-chat-toggle {
+        bottom: 16px;
+        right: 16px;
+    }
+    .gmg-chat-proactive-bubble {
+        right: 12px;
+        bottom: 88px;
+        max-width: calc(100vw - 90px);
+    }
+    /* Con el chat abierto, el campo de texto y el botón enviar no deben quedar bajo nada */
+    .gmg-chat-footer {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+}
+
+/* Aviso breve dentro del chat (reemplaza a las ventanas emergentes) */
+.gmg-chat-aviso {
+    margin: 0 12px 8px;
+    padding: 8px 12px;
+    background: #FDECEB;
+    color: #B71C1C;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.gmg-chat-aviso[hidden] { display: none; }
+
+/* Áreas táctiles de 44 px en el chat */
+.gmg-chip { min-height: 44px; }
+.gmg-chat-input { min-height: 44px; }
+.gmg-chat-close-btn, .gmg-chat-file-btn, .gmg-chat-send-btn { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+/* Con mouse (computador) los botones rápidos pueden ser más compactos y dejar más espacio a la conversación; en pantallas táctiles se mantienen de 44 px */
+@media (hover: hover) and (pointer: fine) {
+    .gmg-chip { min-height: 32px; }
+}
+.gmg-chat-toggle:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }

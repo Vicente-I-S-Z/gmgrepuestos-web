@@ -1,0 +1,330 @@
+/* =========================================================
+   Carrusel de modelos (portada) - "Selecciona tu modelo Suzuki"
+   Reemplaza al acordeón: con 14 modelos los paneles quedaban
+   demasiado angostos. Es un carrusel MANUAL (no avanza solo):
+   se mueve con las flechas, los puntos, el teclado o deslizando
+   con el dedo. El desplazamiento lo hace el navegador con
+   scroll-snap; js/model-carousel.js solo maneja flechas y puntos.
+   ========================================================= */
+
+.model-carousel {
+    --mc-gap: 20px;
+    --mc-por-vista: 4;
+    position: relative;
+    margin: 14px 0 40px;
+}
+
+/* ---------- Pista con scroll horizontal ---------- */
+.mc-track {
+    display: flex;
+    gap: var(--mc-gap);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    padding: 6px 2px 14px;
+    scroll-padding: 0 2px;            /* el encaje respeta el relleno lateral */
+    scrollbar-width: none;            /* Firefox */
+    -webkit-overflow-scrolling: touch;
+    outline: none;
+}
+
+.mc-track::-webkit-scrollbar {
+    display: none;                    /* Chrome, Edge, Safari */
+}
+
+.mc-track:focus-visible {
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.35);
+    border-radius: var(--radius-md, 14px);
+}
+
+/* ---------- Tarjeta ---------- */
+.mc-card {
+    flex: 0 0 calc((100% - (var(--mc-por-vista) - 1) * var(--mc-gap)) / var(--mc-por-vista));
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-radius: var(--radius-md, 14px);
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--color-principal, #111111);
+    box-shadow: var(--shadow-sm, 0 2px 10px rgba(17, 17, 17, 0.08));
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mc-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md, 0 10px 28px rgba(17, 17, 17, 0.12));
+    border-color: #e0e0e0;
+}
+
+.mc-card:focus-visible {
+    outline: 3px solid var(--color-acento, #D32F2F);
+    outline-offset: 2px;
+}
+
+/* Foto: las imágenes de los modelos son retratos 1000x1080 con el auto
+   al centro, así que un recorte 4:3 centrado lo muestra completo. */
+.mc-card__media {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    background: #f3f3f3;
+    overflow: hidden;
+}
+
+.mc-card__img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 52%;
+    /* Las fotos traen fondos blancos o gris muy claro: se aclaran un poco y
+       se "multiplican" sobre el gris de la tarjeta para que todas queden
+       con el mismo fondo, sin recuadros. */
+    filter: brightness(1.07);
+    mix-blend-mode: multiply;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.mc-card:hover .mc-card__img {
+    transform: scale(1.06);
+}
+
+/* Modelo sin foto: tarjeta oscura con silueta genérica */
+.mc-card__placeholder {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background:
+        radial-gradient(circle at 30% 20%, #2b2b2b 0%, #161616 55%, #0d0d0d 100%);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.mc-card__media--sin-foto .mc-card__placeholder {
+    display: flex;
+}
+
+.mc-card__placeholder svg {
+    width: 46%;
+    max-width: 150px;
+    fill: rgba(255, 255, 255, 0.16);
+    stroke: none;
+}
+
+.mc-card__placeholder svg circle {
+    fill: #0d0d0d;
+    stroke: rgba(255, 255, 255, 0.22);
+    stroke-width: 2;
+}
+
+/* Texto de la tarjeta */
+.mc-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 18px 16px;
+    border-top: 3px solid transparent;
+    transition: border-color 0.25s ease;
+}
+
+.mc-card:hover .mc-card__body,
+.mc-card:focus-visible .mc-card__body {
+    border-top-color: var(--color-acento, #D32F2F);
+}
+
+.mc-card__marca {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-acento, #D32F2F);
+}
+
+.mc-card__nombre {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.15;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mc-card__meta {
+    font-size: 0.82rem;
+    color: #6b6b6b;
+    margin-top: 2px;
+}
+
+.mc-card__cta {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--color-principal, #111111);
+}
+
+.mc-card__cta span {
+    display: inline-block;
+    color: var(--color-acento, #D32F2F);
+    transition: transform 0.25s ease;
+}
+
+.mc-card:hover .mc-card__cta span {
+    transform: translateX(4px);
+}
+
+/* ---------- Flechas ---------- */
+.mc-nav {
+    position: absolute;
+    top: 32%;                          /* js/model-carousel.js la centra en la foto */
+    z-index: 2;
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-principal, #111111);
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.45);
+    transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mc-nav[hidden] {
+    display: none;
+}
+
+.mc-nav svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.mc-nav:hover {
+    background: var(--color-acento, #D32F2F);
+    transform: scale(1.06);
+}
+
+.mc-nav:focus-visible {
+    outline: 3px solid var(--color-acento, #D32F2F);
+    outline-offset: 3px;
+}
+
+.mc-nav:disabled {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mc-nav--prev { left: -23px; }
+.mc-nav--next { right: -23px; }
+
+/* ---------- Puntos (páginas) ---------- */
+.mc-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.mc-dot {
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: #cfcfcf;
+    cursor: pointer;
+    transition: width 0.25s ease, background-color 0.25s ease;
+}
+
+.mc-dot:hover {
+    background: #9a9a9a;
+}
+
+.mc-dot.is-active {
+    width: 28px;
+    background: var(--color-acento, #D32F2F);
+}
+
+.mc-dot:focus-visible {
+    outline: 2px solid var(--color-acento, #D32F2F);
+    outline-offset: 3px;
+}
+
+/* Con muchas páginas (celular) los puntos se reemplazan por una barra de avance */
+.mc-progress {
+    width: min(220px, 60%);
+    height: 4px;
+    margin: 4px auto 0;
+    border-radius: 999px;
+    background: #dcdcdc;
+    overflow: hidden;
+}
+
+.mc-progress__fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--color-acento, #D32F2F);
+    transition: width 0.2s ease;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+    .model-carousel { --mc-por-vista: 3; }
+}
+
+@media (max-width: 1240px) {
+    /* Sin margen lateral suficiente: las flechas entran un poco */
+    .mc-nav--prev { left: -10px; }
+    .mc-nav--next { right: -10px; }
+}
+
+@media (max-width: 768px) {
+    .model-carousel { --mc-por-vista: 2; --mc-gap: 14px; }
+    .mc-card__nombre { font-size: 1.15rem; }
+    .mc-nav { width: 44px; height: 44px; }
+    .mc-nav--prev { left: -6px; }
+    .mc-nav--next { right: -6px; }
+}
+
+/* Celular: se ve una tarjeta y un trozo de la siguiente, para que se
+   note que se puede deslizar. Las flechas se ocultan (se usa el dedo). */
+@media (max-width: 520px) {
+    .model-carousel { --mc-gap: 12px; }
+    .mc-card { flex-basis: 78%; }
+    .mc-nav { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mc-track { scroll-behavior: auto; }
+    .mc-card,
+    .mc-card__img,
+    .mc-card__cta span,
+    .mc-nav,
+    .mc-dot {
+        transition: none !important;
+    }
+}
