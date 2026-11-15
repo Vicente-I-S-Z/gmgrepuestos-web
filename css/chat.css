@@ -271,6 +271,7 @@
     border-radius: 8px;
     padding: 10px;
     display: flex;
+    flex-wrap: wrap; /* los botones bajan a su propia fila y el nombre usa todo el ancho */
     gap: 10px;
     align-items: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
@@ -286,6 +287,7 @@
 
 .gmg-chat-product-details {
     flex: 1;
+    min-width: 0;
 }
 
 .gmg-chat-product-title {
@@ -307,21 +309,68 @@
     color: #D32F2F;
 }
 
-.gmg-chat-btn-wa-mini {
-    background-color: #25D366;
-    color: #ffffff;
-    text-decoration: none;
-    font-size: 0.72rem;
-    font-weight: bold;
-    padding: 5px 8px;
-    border-radius: 5px;
+/* Disponibilidad (RF-013): contraste de 4,5:1 o más en los tres estados */
+.gmg-disponibilidad {
     display: inline-block;
-    white-space: nowrap;
-    transition: background-color 0.2s;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
 }
+.gmg-disponibilidad--ok { background: #E8F5E9; color: #1B5E20; }
+.gmg-disponibilidad--pocas { background: #FFF3E0; color: #8A4B00; }
+.gmg-disponibilidad--agotado { background: #FFEBEE; color: #B71C1C; }
 
-.gmg-chat-btn-wa-mini:hover {
-    background-color: #1ebd5a;
+/* Acciones de la tarjeta: áreas táctiles de 44 px */
+.gmg-chat-product-actions {
+    display: flex;
+    flex-basis: 100%;
+    gap: 8px;
+}
+.gmg-chat-product-actions > * { flex: 1 1 0; }
+.gmg-chat-btn-add,
+.gmg-chat-btn-ficha {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+.gmg-chat-btn-add {
+    background: #D32F2F;
+    color: #ffffff;
+    border: none;
+}
+.gmg-chat-btn-add:hover:not(:disabled) { background: #B71C1C; }
+.gmg-chat-btn-add:active:not(:disabled) { transform: scale(0.97); }
+.gmg-chat-btn-add:disabled {
+    background: #E0E0E0;
+    color: #616161;
+    cursor: not-allowed;
+}
+.gmg-chat-btn-ficha {
+    background: #ffffff;
+    color: #111111;
+    border: 1px solid #111111;
+}
+.gmg-chat-btn-ficha:hover { background: #F5F5F5; }
+.gmg-chat-btn-add:focus-visible,
+.gmg-chat-btn-ficha:focus-visible {
+    outline: 3px solid #111111;
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .gmg-chat-btn-add,
+    .gmg-chat-btn-ficha { transition: none; }
 }
 
 /* Indicador de "Escribiendo..." */

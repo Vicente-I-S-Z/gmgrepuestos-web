@@ -19,7 +19,8 @@ $modelosCortosTexto = $modelosCortosTexto ?? 'todos los modelos Suzuki';
     </div>
 
     <!-- Ventana del Chatbot IA -->
-    <div id="gmgChatWindow" class="gmg-chat-window" role="dialog" aria-label="Asistente Virtual GMG">
+    <div id="gmgChatWindow" class="gmg-chat-window" role="dialog" aria-label="Asistente Virtual GMG"
+         data-whatsapp="<?php echo gmgH(gmgEnlaceWhatsApp('Hola, necesito ayuda con un repuesto')); ?>">
         <div class="gmg-chat-header">
             <div class="gmg-chat-header-info">
                 <div class="gmg-chat-avatar">GMG</div>

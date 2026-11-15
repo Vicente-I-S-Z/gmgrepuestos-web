@@ -126,6 +126,12 @@ if (!empty(AI_API_KEY)) {
         $respuestaTexto = $respuestaAPI['reply'];
         // Las tarjetas de producto son solo los resultados reales de buscar_productos.
         $repuestosSugeridos = $respuestaAPI['productos_encontrados'] ?? [];
+        // Botón "Ver ficha" en cada tarjeta, apenas exista la página del producto (F2-4).
+        $hayFicha = is_file(__DIR__ . '/../producto.php');
+        foreach ($repuestosSugeridos as &$repuesto) {
+            $repuesto['url_ficha'] = $hayFicha ? 'producto.php?id=' . (int)$repuesto['id'] : null;
+        }
+        unset($repuesto);
 
         // [ADD_TO_CART] solo con productos que el bot mostró en esta conversación
         // o en esta misma respuesta (E5-H6): un id inventado no agrega nada.

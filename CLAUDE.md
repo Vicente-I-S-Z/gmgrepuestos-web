@@ -38,6 +38,7 @@ Fecha de término del proyecto: 18-12-2026.
 - Herramienta `buscar_productos` del chat contra MariaDB (no deja cambios): `php tests/chat_herramienta_test.php`
 - Chat de punta a punta con una API de OpenAI falsa (`tests/fake_openai.php`, sin gastar tokens): `php tests/chat_historial_test.php` (historial) y `php tests/chat_api_test.php` (tiempos, reintento, rondas y carrito; tarda unos 40 s)
 - CSRF del panel (CP-42): `bash tests/cp42_csrf_panel.sh`; bloqueos del `.htaccess` con Apache real (CP-47): `bash tests/cp47_htaccess.sh`
+- Tarjetas del chat en un navegador real (Edge o Chrome sin ventana, con captura a 360 px): `php tests/chat_tarjetas_test.php`
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).
 
 ## Reglas que no se rompen

@@ -38,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             let id = localStorage.getItem(STORAGE_KEY_SESION);
             if (!id) {
-                id = 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 12);
+                id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+                    ? window.crypto.randomUUID()
+                    : 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 12);
                 localStorage.setItem(STORAGE_KEY_SESION, id);
             }
             return id;
@@ -325,10 +327,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (atajo) formData.append('atajo', atajo);
         // El historial ya no se envía: el servidor lo lee de la base (F1-4, INC-05).
 
+        // Si el servidor no responde en 30 s se corta la espera (el servidor ya se limita a 25 s).
+        const controlador = new AbortController();
+        const limiteEspera = setTimeout(() => controlador.abort(), 30000);
+
         try {
             const response = await fetch('backend/chat.php', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal: controlador.signal
             });
 
             if (!response.ok) {
@@ -366,8 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error al contactar con el backend (chat.php):', error);
             removeTypingIndicator();
-            appendBotMessage("⚠️ No pude conectarme en este momento. Revisa tu conexión a Internet e inténtalo de nuevo. Si el problema sigue, escríbenos por WhatsApp.", [], null, { animar: false });
+            const enlaceWhatsApp = chatWindow && chatWindow.dataset.whatsapp
+                ? ' [escríbenos por WhatsApp](' + chatWindow.dataset.whatsapp + ')'
+                : ' escríbenos por WhatsApp';
+            const aviso = error.name === 'AbortError'
+                ? 'La respuesta está tardando más de lo normal. Inténtalo de nuevo en un momento o' + enlaceWhatsApp + '.'
+                : '⚠️ No pude conectarme en este momento. Revisa tu conexión a Internet e inténtalo de nuevo. Si el problema sigue,' + enlaceWhatsApp + '.';
+            appendBotMessage(aviso, [], null, { animar: false });
         } finally {
+            clearTimeout(limiteEspera);
             isWaitingResponse = false;
             if (chatInput) chatInput.focus();
         }
@@ -463,28 +477,73 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
     }
 
+    // Disponibilidad de la tarjeta (RF-013): la que manda el servidor o, en conversaciones
+    // guardadas antes de este cambio, la que corresponde al stock.
+    function disponibilidadDe(p) {
+        if (p.disponibilidad) return p.disponibilidad;
+        if (p.stock === undefined || p.stock === null || p.stock === '') return '';
+        const stock = parseInt(p.stock, 10) || 0;
+        if (stock <= 0) return 'Sin stock';
+        if (stock <= 3) return 'Últimas unidades';
+        return 'Disponible';
+    }
+
+    // Tarjetas de producto (F1-7). Todo dato va escapado y los botones no llevan código
+    // en línea: los atiende un solo listener por data-accion (ver más abajo).
     function construirHTMLProductos(products) {
         if (!products || products.length === 0) return '';
+        const formatoCLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
         let html = '<div class="gmg-chat-products">';
         products.forEach(p => {
             const img = p.imagen_url || 'img/placeholder-repuesto.svg';
-            const precio = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(p.precio);
+            const disponibilidad = disponibilidadDe(p);
+            const agotado = disponibilidad === 'Sin stock';
+            const claseDisponibilidad = agotado ? 'agotado' : (disponibilidad === 'Últimas unidades' ? 'pocas' : 'ok');
+            const meta = [p.modelo, p.sku ? 'SKU: ' + p.sku : ''].filter(Boolean).join(' | ');
+            // "Ver ficha" solo con rutas del propio sitio (nunca javascript: ni otro dominio).
+            const urlFicha = (p.url_ficha && !/^\s*([a-z][a-z0-9+.-]*:|\/\/)/i.test(p.url_ficha)) ? p.url_ficha : '';
             html += `
                 <div class="gmg-chat-product-card">
-                    <img src="${img}" class="gmg-chat-product-img" alt="${escapeHTML(p.nombre)}" onerror="this.onerror=null;this.src='img/placeholder-repuesto.svg';">
+                    <img src="${escapeHTML(img)}" class="gmg-chat-product-img" alt="${escapeHTML(p.nombre)}" loading="lazy" width="50" height="50">
                     <div class="gmg-chat-product-details">
                         <div class="gmg-chat-product-title">${escapeHTML(p.nombre)}</div>
-                        <div class="gmg-chat-product-meta">${escapeHTML(p.modelo)} | SKU: ${escapeHTML(p.sku)}</div>
-                        <div class="gmg-chat-product-price">${precio}</div>
+                        <div class="gmg-chat-product-meta">${escapeHTML(meta)}</div>
+                        <div class="gmg-chat-product-price">${formatoCLP.format(Number(p.precio) || 0)}</div>
+                        ${disponibilidad ? `<span class="gmg-disponibilidad gmg-disponibilidad--${claseDisponibilidad}">${escapeHTML(disponibilidad)}</span>` : ''}
                     </div>
-                    <button type="button" class="gmg-chat-btn-wa-mini" title="Añadir al carrito" style="background:#333; color:white; border:none; border-radius:4px; padding:5px 10px; cursor:pointer;" onclick="if(window.addToCartFromChat) window.addToCartFromChat({id: '${p.id}', nombre: '${escapeHTML(p.nombre).replace(/'/g, "\\'")}', precio: ${p.precio}, imagen: '${img}'}, 1)">
-                        🛒 Añadir
-                    </button>
-                </div>
-            `;
+                    <div class="gmg-chat-product-actions">
+                        <button type="button" class="gmg-chat-btn-add" data-accion="agregar"
+                                data-id="${escapeHTML(p.id)}" data-nombre="${escapeHTML(p.nombre)}"
+                                data-precio="${escapeHTML(p.precio)}" data-imagen="${escapeHTML(img)}"
+                                ${agotado ? 'disabled' : `aria-label="Añadir ${escapeHTML(p.nombre)} al carrito"`}>${agotado ? 'Sin stock' : '🛒 Añadir'}</button>
+                        ${urlFicha ? `<a class="gmg-chat-btn-ficha" href="${escapeHTML(urlFicha)}">Ver ficha</a>` : ''}
+                    </div>
+                </div>`;
         });
         html += '</div>';
         return html;
+    }
+
+    // Un solo listener para todas las tarjetas, nuevas o restauradas del historial.
+    if (chatMessages) {
+        chatMessages.addEventListener('click', (evento) => {
+            const boton = evento.target.closest('[data-accion="agregar"]');
+            if (!boton || boton.disabled || !window.addToCartFromChat) return;
+            window.addToCartFromChat({
+                id: boton.dataset.id,
+                nombre: boton.dataset.nombre,
+                precio: parseFloat(boton.dataset.precio) || 0,
+                imagen: boton.dataset.imagen
+            }, 1);
+        });
+        // Foto que no carga: se cambia por la genérica (el evento "error" no burbujea, se captura).
+        chatMessages.addEventListener('error', (evento) => {
+            const img = evento.target;
+            if (img && img.classList && img.classList.contains('gmg-chat-product-img') && !img.dataset.sinFoto) {
+                img.dataset.sinFoto = '1';
+                img.src = 'img/placeholder-repuesto.svg';
+            }
+        }, true);
     }
 
     function construirHTMLFeedback(mensajeId) {
@@ -541,7 +600,9 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollToBottom();
         }
 
-        if (!animar || !text) {
+        // Sin animación de escritura si el usuario pidió reducir el movimiento (RNF-026).
+        const reducirMovimiento = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!animar || !text || reducirMovimiento) {
             finalizar();
             return;
         }
