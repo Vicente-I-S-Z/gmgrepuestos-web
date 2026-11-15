@@ -358,7 +358,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             id: item.id,
                             nombre: item.nombre,
                             precio: parseFloat(item.precio),
-                            imagen: item.imagen_url
+                            imagen: item.imagen_url,
+                            stock: item.stock === null || item.stock === undefined ? NaN : parseInt(item.stock, 10)
                         }, item.quantity);
                     });
                 }
@@ -518,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button type="button" class="gmg-chat-btn-add" data-accion="agregar"
                                 data-id="${escapeHTML(p.id)}" data-nombre="${escapeHTML(p.nombre)}"
                                 data-precio="${escapeHTML(p.precio)}" data-imagen="${escapeHTML(img)}"
+                                data-stock="${p.stock === undefined || p.stock === null ? '' : escapeHTML(p.stock)}"
                                 ${agotado ? 'disabled' : `aria-label="Añadir ${escapeHTML(p.nombre)} al carrito"`}>${agotado ? 'Sin stock' : '🛒 Añadir'}</button>
                         ${urlFicha ? `<a class="gmg-chat-btn-ficha" href="${escapeHTML(urlFicha)}">Ver ficha</a>` : ''}
                     </div>
@@ -536,7 +538,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: boton.dataset.id,
                 nombre: boton.dataset.nombre,
                 precio: parseFloat(boton.dataset.precio) || 0,
-                imagen: boton.dataset.imagen
+                imagen: boton.dataset.imagen,
+                stock: parseInt(boton.dataset.stock, 10) // NaN si no se conoce: decide el servidor al pagar
             }, 1);
         });
         // Foto que no carga: se cambia por la genérica (el evento "error" no burbujea, se captura).

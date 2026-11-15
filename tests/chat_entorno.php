@@ -28,8 +28,12 @@ function entornoEsperar(string $url): void {
     }
 }
 
-/** Crea la base temporal y levanta la API falsa y el sitio. $variablesApi: p. ej. ['FAKE_API_DEMORA' => '30']. */
-function entornoIniciar(string $nombre, array $variablesApi = []): array {
+/**
+ * Crea la base temporal y levanta la API falsa y el sitio. $variablesApi: p. ej. ['FAKE_API_DEMORA' => '30'].
+ * $variablesSitio: variables de entorno extra para el sitio (p. ej. un proxy inexistente para que
+ * checkout.php no llegue a Mercado Pago).
+ */
+function entornoIniciar(string $nombre, array $variablesApi = [], array $variablesSitio = []): array {
     $raiz = dirname(__DIR__);
     $e = [
         'raiz' => $raiz,
@@ -57,7 +61,7 @@ function entornoIniciar(string $nombre, array $variablesApi = []): array {
     file_put_contents($e['tmp'] . '/config.txt', "APP_ENV=pruebas\nDB_HOST=localhost\nDB_USER=root\nDB_PASS=\nDB_NAME={$e['base']}\n"
         . "AI_API_KEY=clave-falsa-de-prueba\nAI_API_URL=http://localhost:8093/v1/responses\nSMTP_HOST=127.0.0.1\n");
     $e['procesos'][] = entornoLevantar([PHP_BINARY, '-S', 'localhost:8093', "$raiz/tests/fake_openai.php"], ['FAKE_API_LOG' => $e['log_api']] + $variablesApi);
-    $e['procesos'][] = entornoLevantar([PHP_BINARY, '-d', 'error_log=' . $e['log_php'], '-S', 'localhost:8092', '-t', $raiz], ['GMG_ENV_FILE' => $e['tmp'] . '/config.txt']);
+    $e['procesos'][] = entornoLevantar([PHP_BINARY, '-d', 'error_log=' . $e['log_php'], '-S', 'localhost:8092', '-t', $raiz], ['GMG_ENV_FILE' => $e['tmp'] . '/config.txt'] + $variablesSitio);
     entornoEsperar('http://localhost:8093/');
     entornoEsperar($e['sitio'] . '/login.php');
     return $e;

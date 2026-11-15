@@ -274,7 +274,8 @@ gmgCabeceraPublica([
                                         data-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>"
                                         data-precio="<?php echo htmlspecialchars($producto['precio']); ?>"
                                         data-imagen="<?php echo htmlspecialchars($producto['imagen_url']); ?>"
-                                        data-categoria="<?php echo htmlspecialchars($producto['categoria']); ?>">
+                                        data-categoria="<?php echo htmlspecialchars($producto['categoria']); ?>"
+                                        data-stock="<?php echo (int)$producto['stock']; ?>">
                                     🛒 Añadir al carrito
                                 </button>
                                 <button class="btn-comprar-ahora"
@@ -282,7 +283,8 @@ gmgCabeceraPublica([
                                         data-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>"
                                         data-precio="<?php echo htmlspecialchars($producto['precio']); ?>"
                                         data-imagen="<?php echo htmlspecialchars($producto['imagen_url']); ?>"
-                                        data-categoria="<?php echo htmlspecialchars($producto['categoria']); ?>">
+                                        data-categoria="<?php echo htmlspecialchars($producto['categoria']); ?>"
+                                        data-stock="<?php echo (int)$producto['stock']; ?>">
                                     ⚡ Comprar ahora
                                 </button>
                                 <?php endif; ?>

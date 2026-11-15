@@ -273,6 +273,7 @@ function chatExtraerAddToCart(&$texto, $productos) {
                         'nombre' => $p['nombre'],
                         'precio' => $p['precio'],
                         'imagen_url' => $p['imagen_url'],
+                        'stock' => isset($p['stock']) ? (int)$p['stock'] : null, // el carrito no deja superarlo (F2-2)
                     ];
                     break;
                 }

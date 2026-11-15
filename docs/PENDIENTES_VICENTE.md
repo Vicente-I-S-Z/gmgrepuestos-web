@@ -187,7 +187,7 @@ Archivos listos en `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_fase0\` (11,
          SUM(codigo_oem IS NOT NULL AND codigo_oem <> '') AS con_oem
     FROM repuestos WHERE activo = 1;
   ```
-  Pásale el resultado a Claude Code.
+  Pásale el resultado a Claude Code. **Hazlo antes de subir la Fase 2:** desde F2-1 y F2-2 un producto con stock 0 se ve "Sin stock" y el checkout no deja comprarlo. Si en producción todo está en 0, la tienda quedaría sin ventas.
 - [ ] 2. Si `con_stock` es 0 o muy bajo: pídele a GMG una planilla con dos columnas, `sku` y `stock` (y `codigo_oem` si lo tienen). Pásasela a Claude Code: arma el script de actualización y lo prueba en local antes.
 - [ ] 3. Textos reales del asistente: punto 10.
 

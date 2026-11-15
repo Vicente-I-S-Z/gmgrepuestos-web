@@ -74,8 +74,8 @@ try {
     echo "\n== Carrito ==\n";
     $c = $r['carrito'];
     revisar(count($c) === 2, 'el producto agotado no se agrega (2 clics válidos de 3)', count($c) . ' llamadas');
-    revisar(($c[0]['producto'] ?? null) === ['id' => '242', 'nombre' => 'Pastillas de freno delanteras (juego) Swift 3a gen.', 'precio' => 24990, 'imagen' => 'img/placeholder-repuesto.svg']
-            && ($c[0]['cantidad'] ?? 0) === 1, 'addToCartFromChat recibe id, nombre, precio numérico, imagen y cantidad 1');
+    revisar(($c[0]['producto'] ?? null) === ['id' => '242', 'nombre' => 'Pastillas de freno delanteras (juego) Swift 3a gen.', 'precio' => 24990, 'imagen' => 'img/placeholder-repuesto.svg', 'stock' => 5]
+            && ($c[0]['cantidad'] ?? 0) === 1, 'addToCartFromChat recibe id, nombre, precio numérico, imagen, stock y cantidad 1');
 
     echo "\n== Mensaje nuevo, movimiento reducido y espera máxima ==\n";
     revisar($r['reducirMovimiento'] === true && $r['textoCompletoAlInstante'] === true, 'con prefers-reduced-motion la respuesta se muestra completa al instante');

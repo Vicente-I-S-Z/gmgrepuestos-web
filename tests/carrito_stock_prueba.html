@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<title>Prueba del carrito con stock</title>
+</head>
+<body style="margin:0">
+<!--
+  Página de prueba de tests/carrito_stock_test.php (F2-2). Carga la tienda real en un iframe
+  (búsqueda ELE-M16A: en gmg_local con stock de prueba hay uno con 2 unidades y otro con 8)
+  y revisa que el carrito no deje superar el stock. No se publica (tests/).
+-->
+<iframe id="sitio" title="Tienda" style="width:1200px;height:800px;border:0"></iframe>
+<pre id="resultado">pendiente</pre>
+<script>
+localStorage.removeItem('gmg_cart');
+localStorage.removeItem('gmg_guardado');
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const iframe = document.getElementById('sitio');
+const carrito = () => JSON.parse(localStorage.getItem('gmg_cart') || '[]');
+const cantidad = id => (carrito().find(i => String(i.id) === String(id)) || { quantity: 0 }).quantity;
+
+iframe.addEventListener('load', async () => {
+    await esperar(800);
+    const d = iframe.contentDocument;
+    const w = iframe.contentWindow;
+    const aviso = () => (d.getElementById('gmgToast') || {}).textContent || '';
+    const r = {};
+
+    // Tienda: producto con 2 unidades, 3 clics en "Añadir al carrito".
+    const con2 = d.querySelector('.btn-add-cart[data-stock="2"]');
+    r.hayProductoCon2 = !!con2;
+    con2.click(); con2.click(); con2.click();
+    r.tiendaCantidad = cantidad(con2.dataset.id);
+    r.tiendaAviso = aviso();
+
+    // Chat: producto con 8 unidades. Pedir 9 no agrega; pedir 8 sí.
+    const con8 = d.querySelector('.btn-add-cart[data-stock="8"]');
+    const p8 = { id: con8.dataset.id, nombre: con8.dataset.nombre, precio: parseFloat(con8.dataset.precio), imagen: con8.dataset.imagen, stock: 8 };
+    w.addToCartFromChat(p8, 9);
+    r.chatNueve = cantidad(p8.id);
+    r.chatAviso = aviso();
+    w.addToCartFromChat(p8, 8);
+    r.chatOcho = cantidad(p8.id);
+    w.addToCartFromChat(p8, 1);
+    r.chatUnoMas = cantidad(p8.id);
+
+    // Producto sin dato de stock (guardado antes del cambio): el carrito no pone tope, decide el servidor.
+    w.addToCartFromChat({ id: '999999', nombre: 'Guardado antes', precio: 1000, imagen: '', stock: NaN }, 50);
+    r.sinDato = cantidad('999999');
+
+    // El stock queda guardado con el ítem (NaN se guarda como null).
+    r.stocksGuardados = carrito().map(i => i.stock);
+
+    document.getElementById('resultado').textContent = JSON.stringify(r);
+});
+iframe.src = '/index.php?q=ELE-M16A';
+</script>
+</body>
+</html>

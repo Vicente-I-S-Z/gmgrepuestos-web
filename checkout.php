@@ -179,6 +179,33 @@ if ($resColumna && $resColumna->num_rows > 0) {
 
 $conexion->begin_transaction();
 try {
+    // Stock (E3-H6, INC-10, RF-024): se lee dentro de la transacción y con bloqueo
+    // (FOR UPDATE), así una compra simultánea no trabaja con un stock viejo. Si no
+    // alcanza, no se crea el pedido y se dice qué producto falta y cuántos quedan.
+    // El stock se descuenta al aprobar el pedido (F2-3), no aquí.
+    $listaStock = implode(',', array_map('intval', array_keys($productosDb)));
+    $resStock = $conexion->query("SELECT id_repuesto, stock FROM repuestos WHERE id_repuesto IN ($listaStock) FOR UPDATE");
+    if (!$resStock) {
+        throw new Exception('No se pudo revisar el stock');
+    }
+    $faltantes = [];
+    while ($filaStock = $resStock->fetch_assoc()) {
+        $idStock = (int)$filaStock['id_repuesto'];
+        if ($cantidadesPedidas[$idStock] > (int)$filaStock['stock']) {
+            $faltantes[] = ['id' => $idStock, 'nombre' => $productosDb[$idStock]['nombre'], 'disponible' => max(0, (int)$filaStock['stock'])];
+        }
+    }
+    if ($faltantes) {
+        $conexion->rollback();
+        $detalle = implode(', ', array_map(function ($f) {
+            return $f['nombre'] . ($f['disponible'] > 0 ? ' (quedan ' . $f['disponible'] . ')' : ' (sin stock)');
+        }, $faltantes));
+        echo json_encode(['success' => false,
+                          'message' => 'No hay stock suficiente de: ' . $detalle . '. Ajusta la cantidad e inténtalo de nuevo.',
+                          'sin_stock' => $faltantes], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $idCliente = gmgObtenerOCrearCliente($conexion, $rutCliente, $nombreCliente, $apellidoCliente, $emailCliente, $telefonoCliente);
     if ($idCliente <= 0) {
         throw new Exception('No se pudo registrar al cliente');
