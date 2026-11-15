@@ -3,6 +3,9 @@
  * Funciones compartidas del Asistente Virtual IA - GMG Repuestos
  */
 
+// Búsqueda por palabras, sinónimos y relevancia; historial desde la base (F1-2).
+require_once __DIR__ . '/chat_busqueda.php';
+
 // =========================================================
 // 1) Límite de mensajes por sesión (anti-abuso / control de costo)
 // =========================================================
@@ -105,7 +108,7 @@ function chatDefinicionHerramientas() {
         [
             'type' => 'function',
             'name' => 'buscar_productos',
-            'description' => 'Busca repuestos reales en el catálogo de GMG Repuestos por modelo y año del vehículo, categoría, SKU/código OEM, texto libre o precio máximo. IMPORTANTE: salvo que se busque por SKU o código OEM, es obligatorio enviar el modelo y el año del vehículo del cliente (si no los sabes, pregúntaselos antes de llamar a esta herramienta). Devuelve hasta 8 resultados con id, nombre, modelo, año, motor, compatible_con (lista exacta de vehículos: modelo, motor y años), categoría, sku, codigo_oem, precio y stock.',
+            'description' => 'Busca repuestos reales en el catálogo de GMG Repuestos por modelo y año del vehículo, categoría, SKU/código OEM, texto libre o precio máximo. IMPORTANTE: salvo que se busque por SKU o código OEM, es obligatorio enviar el modelo y el año del vehículo del cliente (si no los sabes, pregúntaselos antes de llamar a esta herramienta). Devuelve hasta 8 resultados ordenados por relevancia, con id, nombre, modelo, año, motor, compatible_con (lista exacta de vehículos: modelo, motor y años), categoría, sku, codigo_oem, precio, stock y disponibilidad ("Disponible", "Últimas unidades" o "Sin stock"). Si falta un dato o el modelo no existe en el catálogo, devuelve un "aviso" con lo que debes hacer.',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
@@ -114,52 +117,13 @@ function chatDefinicionHerramientas() {
                     'anio_desconocido' => ['type' => 'boolean', 'description' => 'Enviar true SOLO si el cliente dijo claramente que no sabe el año de su vehículo'],
                     'categoria' => ['type' => 'string', 'description' => 'Ej: Frenos, Filtros, Suspensión, Motor'],
                     'sku_o_codigo_oem' => ['type' => 'string', 'description' => 'SKU exacto o parcial, o código OEM'],
-                    'texto' => ['type' => 'string', 'description' => 'Texto libre para buscar en el nombre del producto'],
+                    'texto' => ['type' => 'string', 'description' => 'Solo la pieza que busca el cliente, sin modelo ni año. Ej: pastillas de freno delanteras'],
                     'precio_maximo' => ['type' => 'number', 'description' => 'Precio máximo en CLP'],
                 ],
                 'required' => [],
             ],
         ],
     ];
-}
-
-/**
- * Arma una condición SQL tolerante a cómo el modelo de IA redacte el valor:
- * lo parte en palabras y basta con que CUALQUIERA de ellas calce en alguna
- * de las columnas dadas. Esto evita falsos "no encontrado" cuando la IA
- * busca "Suzuki Swift" pero en la base de datos el campo modelo solo dice
- * "Swift" (una búsqueda LIKE '%Suzuki Swift%' contra "Swift" no matchea,
- * pero LIKE '%Swift%' sí).
- */
-function chatCondicionPalabrasLike($conexion, array $columnas, $valor) {
-    $valor = trim((string)$valor);
-    if ($valor === '') return null;
-
-    $palabras = preg_split('/\s+/', $valor);
-    $condiciones = [];
-    foreach ($palabras as $palabra) {
-        $palabra = trim($palabra, " \t\n\r\0\x0B.,");
-        if (mb_strlen($palabra) < 3) continue; // ignora palabras muy cortas (de, el, para...)
-        $p = $conexion->real_escape_string($palabra);
-        $porColumna = [];
-        foreach ($columnas as $columna) {
-            $porColumna[] = "$columna LIKE '%$p%'";
-        }
-        $condiciones[] = '(' . implode(' OR ', $porColumna) . ')';
-    }
-
-    if (empty($condiciones)) {
-        // El valor no tenía palabras de largo útil (ej. "3.5"): usarlo tal cual.
-        $v = $conexion->real_escape_string($valor);
-        $porColumna = [];
-        foreach ($columnas as $columna) {
-            $porColumna[] = "$columna LIKE '%$v%'";
-        }
-        return '(' . implode(' OR ', $porColumna) . ')';
-    }
-
-    // Basta con que UNA palabra calce (más tolerante que exigir la frase completa).
-    return '(' . implode(' OR ', $condiciones) . ')';
 }
 
 /**
@@ -180,9 +144,10 @@ function chatUltimaConsultaSQL($nuevoValor = null) {
  * para que no dependa solo de que la IA "se acuerde" de preguntar.
  *
  * Devuelve null si la búsqueda puede hacerse, o un mensaje (para la IA)
- * pidiéndole que primero pregunte los datos que faltan.
+ * pidiéndole que primero pregunte los datos que faltan, o avisándole que el
+ * modelo no está en el catálogo (con la lista de modelos que sí hay).
  */
-function chatValidarBusqueda($args) {
+function chatValidarBusqueda($args, $conexion = null) {
     // Con un SKU o código OEM no hace falta saber el vehículo.
     if (!empty(trim((string)($args['sku_o_codigo_oem'] ?? '')))) {
         return null;
@@ -195,75 +160,65 @@ function chatValidarBusqueda($args) {
     $faltan = [];
     if ($modelo === '') $faltan[] = 'el MODELO';
     if (!$anioValido && !$anioDesconocido) $faltan[] = 'el AÑO';
-    if (count($faltan) === 0) {
-        return null;
+    if (count($faltan) > 0) {
+        return 'BÚSQUEDA NO REALIZADA: falta ' . implode(' y ', $faltan) . ' del vehículo del cliente. '
+             . 'Pregúntaselo ahora (una sola pregunta, breve y amable) y no recomiendes ningún producto hasta tenerlo.';
     }
-    return 'BÚSQUEDA NO REALIZADA: falta ' . implode(' y ', $faltan) . ' del vehículo del cliente. '
-         . 'Pregúntaselo ahora (una sola pregunta, breve y amable) y no recomiendes ningún producto hasta tenerlo.';
+
+    // El modelo debe ser uno de los que tienen repuestos (Vitara y Grand Vitara son distintos).
+    if ($conexion) {
+        $modelos = chatModelosCortos($conexion);
+        if ($modelos && !in_array(chatModeloClave($modelo), array_map('chatModeloClave', $modelos), true)) {
+            return 'BÚSQUEDA NO REALIZADA: no hay repuestos cargados para el modelo "' . mb_substr($modelo, 0, 40) . '". '
+                 . 'Modelos con repuestos: ' . implode(', ', $modelos) . '. '
+                 . 'Si el modelo del cliente es una versión de uno de estos (por ejemplo "Swift Sport" es Swift), vuelve a buscar con ese nombre. '
+                 . 'Si no, dile que por ahora no tenemos repuestos para su modelo y ofrécele WhatsApp.';
+        }
+    }
+    return null;
 }
 
+/**
+ * Herramienta buscar_productos (E5-H3, INC-06): primero exige todas las
+ * palabras y, si no hay resultados, basta una; ordena por relevancia y stock.
+ * Todo con sentencias preparadas (chatConsultaBusqueda en chat_busqueda.php).
+ * Devuelve el detalle de cada repuesto con su disponibilidad (RF-013).
+ */
 function chatEjecutarBusquedaProductos($conexion, $args) {
-    $where = [];
-
-    if (!empty($args['modelo'])) {
-        $cond = chatCondicionPalabrasLike($conexion, ['modelo'], $args['modelo']);
-        if ($cond) $where[] = $cond;
-
-        // Con el año del vehículo, el repuesto debe servir para ESE modelo en ESE año
-        // (no basta con que sirva para el modelo en otro año).
-        $anioBuscado = (int)($args['anio'] ?? 0);
-        if ($anioBuscado >= 1970 && $anioBuscado <= 2100) {
-            $condModelo = chatCondicionPalabrasLike($conexion, ['mo.nombre'], $args['modelo']);
-            if ($condModelo) {
-                $where[] = "id IN (SELECT co.id_repuesto
-                                     FROM compatibilidades co
-                                     JOIN vehiculos v ON v.id_vehiculo = co.id_vehiculo
-                                     JOIN modelos mo ON mo.id_modelo = v.id_modelo
-                                    WHERE $condModelo
-                                      AND v.anio_desde <= $anioBuscado
-                                      AND (v.anio_hasta IS NULL OR v.anio_hasta >= $anioBuscado))";
-            }
+    $ids = [];
+    foreach ([true, false] as $estricto) {
+        [$sql, $tipos, $params] = chatConsultaBusqueda($args, 8, $estricto);
+        // Guardada solo para el modo debug (CHAT_DEBUG o sesión de administrador).
+        chatUltimaConsultaSQL($sql);
+        $stmt = $conexion->prepare($sql);
+        if (!$stmt) {
+            error_log('[GMG Chat] No se pudo preparar la búsqueda: ' . $conexion->error);
+            return [];
+        }
+        if ($tipos !== '') {
+            $stmt->bind_param($tipos, ...$params);
+        }
+        $stmt->execute();
+        $ids = array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'id');
+        $stmt->close();
+        if ($ids) {
+            break;
         }
     }
-    if (!empty($args['categoria'])) {
-        $cond = chatCondicionPalabrasLike($conexion, ['categoria', 'nombre'], $args['categoria']);
-        if ($cond) $where[] = $cond;
-    }
-    if (!empty($args['sku_o_codigo_oem'])) {
-        $v = $conexion->real_escape_string(trim($args['sku_o_codigo_oem']));
-        $where[] = "(sku LIKE '%$v%' OR codigo_oem LIKE '%$v%')";
-    }
-    if (!empty($args['texto'])) {
-        $cond = chatCondicionPalabrasLike($conexion, ['nombre', 'categoria', 'modelo'], $args['texto']);
-        if ($cond) $where[] = $cond;
-    }
-    // El modelo de IA a veces manda precio_maximo aunque el cliente no haya
-    // pedido filtrar por precio (relleno con 0 en vez de omitir el campo).
-    // Un precio máximo de 0 (o negativo) no tiene sentido de negocio aquí,
-    // así que se ignora para no descartar todo el catálogo por accidente.
-    if (isset($args['precio_maximo']) && is_numeric($args['precio_maximo']) && (float)$args['precio_maximo'] > 0) {
-        $where[] = "precio <= " . (float)$args['precio_maximo'];
+    if (!$ids) {
+        return [];
     }
 
-    // Base v2: gmgSqlProductos() entrega las mismas columnas de antes
-    // (modelo, ano, motor) calculadas desde compatibilidades, más
-    // compatible_con con la lista exacta de vehículos.
-    $where[] = "activo = 1";
-    $sql = "SELECT id, nombre, modelo, ano, motor, compatible_con, categoria, sku, codigo_oem, precio, stock, imagen_url FROM " . gmgSqlProductos() . " p";
-    $sql .= " WHERE " . implode(" AND ", $where);
-    $sql .= " ORDER BY nombre ASC LIMIT 8";
-
-    // Guardada solo para poder mostrarla en el modo debug (ver bot_config.php
-    // CHAT_DEBUG); no afecta el comportamiento normal del chat.
-    chatUltimaConsultaSQL($sql);
-
-    $resultado = $conexion->query($sql);
-    $filas = [];
-    if ($resultado) {
-        while ($f = $resultado->fetch_assoc()) {
-            $filas[] = $f;
-        }
+    $lista = implode(',', array_map('intval', $ids));
+    $r = $conexion->query("SELECT id, nombre, modelo, ano, motor, compatible_con, categoria, sku, codigo_oem,
+                                  precio, stock, imagen_url
+                             FROM " . gmgSqlProductos() . " p WHERE p.id IN ($lista)
+                            ORDER BY FIELD(p.id, $lista)");
+    $filas = $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+    foreach ($filas as &$f) {
+        $f['disponibilidad'] = chatDisponibilidad((int)$f['stock']);
     }
+    unset($f);
     return $filas;
 }
 
@@ -535,7 +490,7 @@ function chatResolverToolCalls($resultado, $mensajes, $herramientas, $conexion, 
             if (is_array($decodedArgs)) $args = $decodedArgs;
         }
 
-        $avisoFaltanDatos = ($llamada['name'] ?? '') === 'buscar_productos' ? chatValidarBusqueda($args) : null;
+        $avisoFaltanDatos = ($llamada['name'] ?? '') === 'buscar_productos' ? chatValidarBusqueda($args, $conexion) : null;
         $resultadosBusqueda = ($llamada['name'] ?? '') === 'buscar_productos' && $conexion && $avisoFaltanDatos === null
             ? chatEjecutarBusquedaProductos($conexion, $args)
             : [];
