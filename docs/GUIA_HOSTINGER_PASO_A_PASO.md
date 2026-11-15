@@ -12,7 +12,7 @@ Marca cada casilla al terminar. Si algo no calza con lo que dice la guía, deten
 Necesitas acceso a:
 
 - hPanel de Hostinger (gmgrepuestos.cl): Administrador de archivos, Bases de datos (phpMyAdmin), Correos, Avanzado.
-- La carpeta del proyecto en el computador: `C:\Users\santi\Desktop\Gmgrepuestos`.
+- Una copia del repositorio en tu computador: `git clone` del repo privado `gmgrepuestos-web` (o `git pull` si ya lo tienes). En esta guía, "la carpeta del proyecto" es esa carpeta clonada. Para subir el sitio no necesitas instalar nada más.
 - Para la parte 7: la cuenta de OpenAI del proyecto, el panel de Mercado Pago y el correo `Ventas@gmgrepuestos.cl`.
 
 Reglas que no se rompen:
@@ -40,7 +40,7 @@ Con estos dos archivos se puede volver atrás (ver la parte 10).
 domains/gmgrepuestos.cl/
 ├── .env                 <- claves del sitio (AQUÍ, una carpeta arriba de public_html; nunca dentro)
 ├── DO_NOT_UPLOAD_HERE   <- archivo de Hostinger, no tocar
-└── public_html/         <- SOLO lo que está en dist\subida_final\ del proyecto
+└── public_html/         <- SOLO las carpetas y archivos de la lista de la parte 5
     ├── .htaccess, index.php, producto.php, checkout.php, recuperar.php, sitemap.php, robots.txt, ...
     ├── admin/           (12 archivos)
     ├── backend/         (27 archivos, incluye su propio .htaccess)
@@ -63,7 +63,7 @@ domains/gmgrepuestos.cl/
 
 Van **antes** de subir los archivos: el código nuevo los necesita. Se pueden repetir sin riesgo si no sabes si ya se ejecutaron.
 
-En phpMyAdmin > la base del sitio > pestaña **Importar** > Seleccionar archivo > Importar, uno por uno y en este orden (los archivos están en `C:\Users\santi\Desktop\Gmgrepuestos\BD_v2\`):
+En phpMyAdmin > la base del sitio > pestaña **Importar** > Seleccionar archivo > Importar, uno por uno y en este orden (los archivos están en la carpeta `BD_v2` del proyecto):
 
 - [ ] 1. `07_stock_descontado.sql` (aprobar un pedido descuenta el stock una sola vez).
 - [ ] 2. `08_busquedas_sin_resultado.sql` (registra lo que buscan y no encuentran).
@@ -98,15 +98,17 @@ Guarda solo si cambiaste algo.
 
 ## 5. Subir los archivos (20 min)
 
-Origen: `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_final\` (133 archivos, ya probados).
-En cada carpeta del servidor: botón **Subir** > elige **todos** los archivos de la carpeta equivalente > aceptar **reemplazar**.
+Origen: la carpeta del proyecto (la copia del repositorio). Solo se suben estas 5 carpetas y los 17 archivos de la raíz del paso 6 (133 archivos en total, la misma versión que se probó). **Todo lo demás del repositorio NO se sube**: `docs`, `BD_v2`, `tests`, `arquitectura`, `.claude`, `CLAUDE.md`, `skills-lock.json`, `.env.example`, `.gitignore`, `.gitattributes` y `.git`.
 
-- [ ] 1. `public_html/backend`: los **27** archivos de `subida_final\backend\` en una sola subida (incluye `.htaccess`). Van juntos porque se usan entre sí.
+En cada carpeta del servidor: botón **Subir** > elige **todos** los archivos de la carpeta equivalente del proyecto > aceptar **reemplazar**. Varias carpetas tienen un `.htaccess` oculto que también va: en el Explorador de Windows activa Vista > Mostrar > "Elementos ocultos".
+
+- [ ] 1. `public_html/backend`: los **27** archivos de `backend\` en una sola subida (incluye `.htaccess`; la subcarpeta `parciales` va en el paso 2). Van juntos porque se usan entre sí.
 - [ ] 2. `public_html/backend/parciales`: los 2.
 - [ ] 3. `public_html/admin`: los 12.
 - [ ] 4. `public_html/css`: los 4. `public_html/js`: los 5.
 - [ ] 5. `public_html/img`: los 31. `public_html/img/repuestos`: los 35.
-- [ ] 6. `public_html` (raíz): los **17** archivos sueltos (incluye `.htaccess`, `robots.txt`, `sitemap.php`, `producto.php` y `recuperar.php`).
+- [ ] 6. `public_html` (raíz): estos **17** archivos de la raíz del proyecto, y ningún otro:
+  `.htaccess`, `cambios-y-devoluciones.php`, `checkout.php`, `contacto.php`, `despacho.php`, `index.php`, `login.php`, `logout.php`, `mercadopago_return.php`, `mi-pedido.php`, `politica-de-privacidad.php`, `producto.php`, `quienes-somos.php`, `recuperar.php`, `robots.txt`, `sitemap.php`, `terminos-y-condiciones.php`.
 - [ ] 7. Permisos: clic derecho en `public_html/img/repuestos` > Permisos > **755**. Lo mismo para `public_html/img/modelos` (créala si no existe).
 
 ---
