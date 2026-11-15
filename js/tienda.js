@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = '';
             sugerencias.forEach(s => {
                 html += `
-                    <a href="producto.php?id=${encodeURIComponent(s.id)}" class="search-sugerencia-item">
+                    <a href="${escapeHTML(s.url || ('producto.php?id=' + encodeURIComponent(s.id)))}" class="search-sugerencia-item">
                         <img src="${escapeHTML(s.imagen)}" alt="" class="search-sugerencia-img">
                         <div class="search-sugerencia-info">
                             <div class="search-sugerencia-nombre">${escapeHTML(s.nombre)}</div>

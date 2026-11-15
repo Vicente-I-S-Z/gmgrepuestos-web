@@ -28,6 +28,11 @@ Options -Indexes
     RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+    # URLs legibles de las fichas (F4-2): /repuestos/swift/pastillas-de-freno-255 -> producto.php?id=255.
+    # La variable avisa a PHP que el servidor reescribe (en el computador, con php -S, no existe).
+    RewriteRule ^ - [E=GMG_REESCRITURA:1]
+    RewriteRule ^repuestos/[a-z0-9-]+/[a-z0-9-]*-([0-9]+)/?$ producto.php?id=$1 [L,QSA]
+
     # 3) Carpetas internas que nunca deben abrirse desde internet (no se suben
     #    al hosting, pero si alguna llega por error queda bloqueada igual).
     RewriteRule ^(BD_v2|docs|arquitectura|tests|\.claude|\.git|backend/parciales)(/|$) - [F,L,NC]

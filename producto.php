@@ -94,7 +94,16 @@ $imagenes = array_values(array_filter([$producto['imagen_url'], $producto['image
 $modelos = $producto['modelo'] ? explode(', ', $producto['modelo']) : [];
 $vehiculos = $producto['compatible_con'] ? explode('; ', $producto['compatible_con']) : [];
 $descripcion = trim((string)$producto['descripcion']);
-$urlCanonica = gmgUrlBase() . '/producto.php?id=' . $id;
+$rutaFicha = gmgUrlProducto($id, $nombre, $producto['modelo']);
+$urlCanonica = gmgUrlBase() . '/' . $rutaFicha;
+// URL legible (F4-2): si llegó por producto.php?id= o con un nombre viejo, 301 a la dirección correcta.
+if (gmgReescrituraActiva()) {
+    $pedida = rawurldecode((string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH));
+    if ($pedida !== (string)parse_url($urlCanonica, PHP_URL_PATH)) {
+        header('Location: ' . $urlCanonica, true, 301);
+        exit;
+    }
+}
 $imagenesAbsolutas = array_map('gmgUrlAbsoluta', $imagenes);
 
 $textoMeta = $descripcion !== ''
@@ -136,6 +145,7 @@ gmgCabeceraPublica([
     'og_tipo'     => 'product',
     'og_imagen'   => $imagenesAbsolutas[0] ?? '',
     'json_ld'     => $jsonLd,
+    'base'        => true, // la URL legible tiene "carpetas": los recursos se piden desde la raíz
 ]);
 
 $datosCarrito = 'data-id="' . $id . '" data-nombre="' . gmgH($nombre) . '" data-precio="' . gmgH($producto['precio'])
@@ -157,7 +167,8 @@ $enlaceWhatsApp = gmgEnlaceWhatsApp('Hola, quiero confirmar si el repuesto ' . $
             </ol>
         </nav>
 
-        <article class="ficha-producto" data-producto-id="<?php echo $id; ?>">
+        <article class="ficha-producto" data-producto-id="<?php echo $id; ?>"
+                 data-ga-item="<?php echo gmgH(json_encode(['item_id' => (string)$id, 'item_name' => $nombre, 'item_category' => (string)$producto['categoria'], 'price' => round($precio)], JSON_UNESCAPED_UNICODE)); ?>">
             <div class="ficha-galeria producto-img-wrap">
                 <?php foreach ($imagenes as $i => $urlImagen): ?>
                     <img src="<?php echo gmgH($urlImagen); ?>"
@@ -244,7 +255,7 @@ $enlaceWhatsApp = gmgEnlaceWhatsApp('Hola, quiero confirmar si el repuesto ' . $
                 <div class="ficha-relacionados">
                     <?php foreach ($relacionados as $rel): ?>
                         <?php $dispRel = chatDisponibilidad((int)$rel['stock']); ?>
-                        <a class="ficha-relacionado" href="producto.php?id=<?php echo (int)$rel['id']; ?>">
+                        <a class="ficha-relacionado" href="<?php echo gmgH(gmgUrlProducto($rel['id'], $rel['nombre'], $producto['modelo'])); ?>">
                             <img src="<?php echo gmgH($rel['imagen_url']); ?>" alt="<?php echo gmgH($rel['nombre']); ?>" loading="lazy"
                                  onerror="this.onerror=null;this.src='img/placeholder-repuesto.svg';">
                             <span class="ficha-relacionado-nombre"><?php echo gmgH($rel['nombre']); ?></span>

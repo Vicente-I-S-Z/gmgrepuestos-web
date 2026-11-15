@@ -45,6 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['admin_id'] = (int)$idAdmin;
                 $_SESSION['admin_nombre'] = $admin['nombre'];
                 $_SESSION['admin_ultimo'] = time();
+                $_SESSION['admin_rol'] = $admin['rol'] ?? 'admin';
+                $ultimo = $conexion->prepare("UPDATE administradores SET ultimo_acceso = NOW() WHERE id_admin = ?");
+                $ultimo->bind_param('i', $idAdmin);
+                $ultimo->execute();
+                $ultimo->close();
                 gmgLimiteReiniciar($conexion, 'login_ip');
                 gmgLimiteReiniciar($conexion, 'login_usuario', $claveUsuario);
                 header('Location: admin/index.php');
@@ -91,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" class="btn-login">Iniciar sesión</button>
             </form>
 
+            <a href="recuperar.php" class="login-back">¿Olvidaste tu contraseña?</a>
             <a href="index.php" class="login-back">← Volver a la tienda</a>
         </div>
     </div>

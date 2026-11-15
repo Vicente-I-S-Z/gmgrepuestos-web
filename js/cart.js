@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
         promoAplicado = null;
         saveCart();
         updateCartUI();
+        if (window.gmgEvento) window.gmgEvento('add_to_cart', { currency: 'CLP', value: Number(item.precio) || 0, items: [window.gmgItemAnalitica(item, 1)] }); // F4-3
         return true;
     }
 
@@ -231,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         promoAplicado = null;
         saveCart();
         updateCartUI();
+        if (window.gmgEvento) window.gmgEvento('add_to_cart', { currency: 'CLP', value: (Number(item.precio) || 0) * quantity, items: [window.gmgItemAnalitica(item, quantity)], origen: 'chat' }); // F4-3
         abrirCarrito();
         mostrarToast('Agregaste "' + product.nombre + '" al carrito.', 'exito');
     };
@@ -520,6 +522,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function abrirModalCliente() {
+        if (window.gmgEvento) { // F4-3: el cliente empezó a pagar
+            const items = itemsSeleccionados();
+            window.gmgEvento('begin_checkout', { currency: 'CLP', value: calcularSubtotal(items), items: items.map(i => window.gmgItemAnalitica(i, i.quantity)) });
+        }
         // El aviso de "agregaste al carrito" no debe tapar el formulario.
         if (gmgToast) { clearTimeout(temporizadorToast); gmgToast.hidden = true; }
         limpiarErroresCliente();

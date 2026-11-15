@@ -457,15 +457,6 @@
     border: 1px solid #ccc;
 }
 
-.gmg-chat-preview-name {
-    font-size: 0.72rem;
-    color: #444444;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .gmg-chat-preview-remove {
     background: none;
     border: none;

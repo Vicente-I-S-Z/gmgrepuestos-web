@@ -155,6 +155,67 @@ function chatDefinicionHerramientas() {
                 'required' => [],
             ],
         ],
+        [
+            'type' => 'function',
+            'name' => 'consultar_pedido',
+            'description' => 'Consulta el estado de un pedido de la tienda (F3-12). Pide SIEMPRE el número de pedido y el correo o RUT con que se hizo la compra. Devuelve estado, pago, fecha, productos, total y el siguiente paso, o un "aviso" si los datos no coinciden.',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'numero_pedido' => ['type' => 'integer', 'description' => 'Número del pedido. Ej: 125'],
+                    'correo_o_rut' => ['type' => 'string', 'description' => 'Correo o RUT con que se hizo la compra. Ej: 12.345.678-5'],
+                ],
+                'required' => ['numero_pedido', 'correo_o_rut'],
+            ],
+        ],
+    ];
+}
+
+/**
+ * Estado de un pedido para el chat (F3-12, E5-H12, RF-047). Solo responde si el número coincide
+ * con el correo o el RUT del cliente; si no, el mismo aviso siempre (no revela qué pedidos existen).
+ * Máximo 5 consultas por IP cada 10 minutos.
+ */
+function chatConsultarPedido($conexion, array $args) {
+    $noEncontrado = ['aviso' => 'No encontramos un pedido con ese número y ese correo o RUT. Pídele al cliente que revise los datos o que escriba por WhatsApp.'];
+    if (gmgLimiteSuperado($conexion, 'chat_pedido', 5, 600)) {
+        return ['aviso' => 'Se hicieron muchas consultas de pedidos seguidas. Pídele al cliente que espere unos minutos o que escriba por WhatsApp.'];
+    }
+    $numero = (int)($args['numero_pedido'] ?? 0);
+    $dato = trim((string)($args['correo_o_rut'] ?? ''));
+    if ($numero <= 0 || $dato === '') {
+        return ['aviso' => 'Falta el número de pedido o el correo o RUT con que se compró. Pídeselo al cliente.'];
+    }
+    $stmt = $conexion->prepare("SELECT * FROM " . gmgSqlPedidos() . " p WHERE p.id = ? LIMIT 1");
+    $stmt->bind_param('i', $numero);
+    $stmt->execute();
+    $pedido = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $coincide = $pedido && (
+        (strpos($dato, '@') !== false && mb_strtolower($dato) === mb_strtolower((string)$pedido['email_cliente']))
+        || (gmgNormalizarRut($dato) !== '' && gmgNormalizarRut($dato) === gmgNormalizarRut((string)$pedido['rut_cliente'])));
+    if (!$coincide) {
+        return $noEncontrado;
+    }
+    $stmt = $conexion->prepare("SELECT nombre_producto, cantidad FROM " . gmgSqlPedidoItems() . " i WHERE i.pedido_id = ?");
+    $stmt->bind_param('i', $numero);
+    $stmt->execute();
+    $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    $pasos = [
+        'pendiente' => 'Estamos revisando el pago. Cuando se apruebe, te escribimos por WhatsApp para coordinar la entrega.',
+        'aprobado'  => 'Pedido aprobado: coordinamos la entrega o el retiro por WhatsApp.',
+        'rechazado' => 'El pedido fue rechazado. Si crees que es un error, escríbenos por WhatsApp.',
+        'error'     => 'Hubo un problema con el pago. Escríbenos por WhatsApp para ayudarte.',
+    ];
+    return [
+        'pedido' => $numero,
+        'estado' => $pedido['estado'],
+        'pago' => $pedido['pago_estado'] ?: 'pendiente',
+        'fecha' => date('d-m-Y', strtotime($pedido['fecha'])),
+        'total_clp' => (int)$pedido['total'],
+        'productos' => array_map(function ($i) { return $i['cantidad'] . ' x ' . $i['nombre_producto']; }, $items),
+        'siguiente_paso' => $pasos[$pedido['estado']] ?? 'Escríbenos por WhatsApp para más detalles.',
     ];
 }
 
@@ -481,10 +542,16 @@ function chatResolverToolCalls(array $resultado, array $entrada, array $herramie
             $args = json_decode((string)($llamada['arguments'] ?? ''), true);
             $args = is_array($args) ? $args : [];
             $esBusqueda = ($llamada['name'] ?? '') === 'buscar_productos';
-            $aviso = $esBusqueda ? chatValidarBusqueda($args, $conexion) : 'Herramienta desconocida: usa solo buscar_productos.';
+            $esPedido = ($llamada['name'] ?? '') === 'consultar_pedido'; // F3-12
+            $aviso = $esBusqueda ? chatValidarBusqueda($args, $conexion) : ($esPedido ? null : 'Herramienta desconocida: usa buscar_productos o consultar_pedido.');
             $resultados = ($esBusqueda && $aviso === null && $conexion) ? chatEjecutarBusquedaProductos($conexion, $args) : [];
-            foreach ($resultados as $p) {
-                $productosEncontrados[$p['id']] = $p; // sin repetir
+            if ($esPedido) {
+                $consulta = $conexion ? chatConsultarPedido($conexion, $args) : ['aviso' => 'Sin conexión a la base.'];
+                $aviso = $consulta['aviso'] ?? null;
+                $resultados = isset($consulta['aviso']) ? [] : [$consulta];
+            }
+            foreach ($esBusqueda ? $resultados : [] as $p) {
+                $productosEncontrados[$p['id']] = $p; // sin repetir (un pedido no es una tarjeta de producto)
             }
             $debugBusquedas[] = ['nombre' => $llamada['name'] ?? '', 'args' => $args, 'num_resultados' => count($resultados)];
             $entrada[] = [

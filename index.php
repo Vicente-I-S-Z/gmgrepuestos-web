@@ -379,7 +379,7 @@ gmgCabeceraPublica([
                         </div>
                         <div class="producto-info">
                             <div class="producto-categoria"><?php echo htmlspecialchars($producto['categoria']); ?></div>
-                            <h3 class="producto-nombre"><a href="producto.php?id=<?php echo (int)$producto['id']; ?>"><?php echo gmgH($producto['nombre']); ?></a></h3>
+                            <h3 class="producto-nombre"><a href="<?php echo gmgH(gmgUrlProducto($producto['id'], $producto['nombre'], $producto['modelo'] ?? '')); ?>"><?php echo gmgH($producto['nombre']); ?></a></h3>
                             <div class="producto-detalles">
                                 <p><strong>Modelo:</strong> <?php echo htmlspecialchars($producto['modelo'] ?? ''); ?></p>
                                 <p><strong>Año:</strong> <?php echo htmlspecialchars($producto['ano'] ?? ''); ?></p>

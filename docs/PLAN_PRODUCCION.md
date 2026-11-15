@@ -57,7 +57,9 @@ Fuera de alcance: pasarela Mercado Pago (E4-H1, E4-H2, E4-H5, INC-09, INC-11).
 - [ ] **F0-7 Datos reales** (EV-*, E2-H6). Con Vicente: confirmar en producción `SELECT COUNT(*), SUM(stock > 0) FROM repuestos WHERE activo = 1;`. Si todo está en 0, cargar stock real (aunque sea con un `UPDATE` por SKU) y los `codigo_oem` que GMG entregue. Cargar textos reales en el panel "Asistente".
   Visto en la exportación del 14-11: en producción, horario, dirección ("Av. Providencia 1234"), teléfono ("+56 9 1234 5678") y correo son los textos de ejemplo del panel (`gmgTemasConocimiento()`), y el chat y la página Contacto los muestran como reales. Reemplazarlos por los de GMG o dejarlos vacíos (vacío = el chat ofrece WhatsApp).
   Solo en local (15-11): `gmg_local` tiene stock DE PRUEBA para probar el chat (id terminado en 0 = 0 unidades, en 1 = 2, el resto 8; 431 disponibles, 54 últimas unidades, 53 sin stock). No es el stock real. Para volver al estado del script: `UPDATE repuestos SET stock = 0;`.
-- [ ] **F0-8 Skills instaladas** (ver sección "Skills" al final). Verificar con `/ponytail-help` y que `/emil-design-eng` aparezca al escribir `/`.
+- [x] **F0-8 Skills instaladas** (ver sección "Skills" al final). Verificar con `/ponytail-help` y que `/emil-design-eng` aparezca al escribir `/`.
+  Hecho (15-11) por Claude Code sin pasar por `/plugin`: `npx skills add` instaló en `.claude/skills/` las 6 de Emil Kowalski (`emil-design-eng`, `review-animations`, `improve-animations`, `find-animation-opportunities`, `break-ui`, `mobile-native`) y 4 de Ponytail (`ponytail`, `ponytail-review`, `ponytail-audit`, `ponytail-help`); solo traen instrucciones `.md` (revisado). Queda `skills-lock.json` en la raíz (no se sube al hosting).
+  Probado: la sesión las lista como disponibles; se usaron `ponytail-audit` y `mobile-native` en la limpieza del 15-11.
 
 **Puerta de salida:** CP-42 y CP-47 exitosos, claves rotadas, Git funcionando.
 
@@ -157,7 +159,9 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
   Hecho (15-11): `gmgIniciarSesion()` en `backend/seguridad.php` (HttpOnly, Secure con HTTPS, SameSite=Lax, modo estricto) en los 4 lugares que abrían sesión; `backend/auth.php` cierra el panel tras 30 min sin actividad (`login.php?expirada=1`); `login.php` bloquea 15 min tras 5 fallos por IP o por usuario (contadores en `limites_solicitudes`, mismo mensaje exista o no el usuario, se borran al entrar bien); `logout.php` borra la cookie (`gmgCerrarSesion`).
   Probado: `php tests/login_seguro_test.php` TODO OK (18, CP-37 y CP-38).
   Listo cuando: CP-37 y CP-38 exitosos.
-- [ ] **F3-2 Restablecer contraseña** (E1-H5, RF-005). Token de un uso (guardar solo su hash), 30 min de vigencia, correo con enlace.
+- [x] **F3-2 Restablecer contraseña** (E1-H5, RF-005). Token de un uso (guardar solo su hash), 30 min de vigencia, correo con enlace.
+  Hecho (15-11): `recuperar.php` (pedir enlace y elegir clave nueva) y enlace "¿Olvidaste tu contraseña?" en el login. Token de 64 hex, se guarda solo su SHA-256, 30 minutos, un solo uso (y al pedir uno nuevo se anulan los anteriores); misma respuesta exista o no la cuenta; 5 pedidos por IP cada 15 min; clave mínima de 10; CSRF; auditoría; al cambiarla se borran los intentos fallidos. Script nuevo `BD_v2/09_cuentas_banners.sql` (correo y rol del administrador, tablas `restablecer_clave` y `banners`; **ejecutar en producción**). El correo de cada administrador se carga en el panel > Usuarios.
+  Probado: `php tests/cuentas_test.php` TODO OK (parte F3-2: 9 revisiones). El envío real del correo queda pendiente de probar en el servidor (SMTP de Hostinger).
 - [x] **F3-3 Límites por IP** (E10-H3, RNF-035). `gmgLimiteSuperado` en `validar_codigo.php`, `registrar_aviso_stock.php`, `buscar_sugerencias.php` y `checkout.php`. Turnstile opcional (RNF-041, prioridad baja).
   Hecho (15-11): sugerencias 60/min, código de descuento 10/min, aviso de stock 5 cada 10 min y checkout 10 cada 10 min (IP como hash). De paso, checkout, aviso de stock y código ya no caen con campos enviados como arreglo (hallazgo de F2-7). Turnstile no se hizo (prioridad baja).
   Probado: `php tests/limites_ip_test.php` TODO OK (17).
@@ -186,7 +190,9 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 - [x] **F3-11 Aviso de reposición en la tienda** (E2-H9, RF-016). Formulario en la tarjeta y la ficha cuando hay stock 0.
   Hecho (15-11): formulario "Avísame cuando llegue" (`gmgFormularioAvisoStock`) en las tarjetas sin stock (plegado) y en la ficha; `js/tienda.js` lo envía al endpoint del chat. El servidor ahora exige correo o celular chileno (normalizado).
   Probado: `php tests/aviso_stock_test.php` TODO OK (9, en Edge).
-- [ ] **F3-12 (Baja) Estado del pedido en el chat** (E5-H12, RF-047). Herramienta `consultar_pedido` con número más correo o RUT; mismo mensaje si no coincide.
+- [x] **F3-12 (Baja) Estado del pedido en el chat** (E5-H12, RF-047). Herramienta `consultar_pedido` con número más correo o RUT; mismo mensaje si no coincide.
+  Hecho (15-11): herramienta `consultar_pedido` del chat (número + correo o RUT, mismo aviso si no coincide, 5 por IP cada 10 min) y regla en el prompt; el resultado no se muestra como tarjeta de producto.
+  Probado: `php tests/chat_pedido_test.php` TODO OK (6, con la API falsa); regresión de las pruebas del chat en TODO OK. Falta probarlo con la IA real.
 
 **Puerta de salida:** CP-22, CP-23, CP-31, CP-34, CP-37, CP-38 y CP-42 exitosos.
 
@@ -197,13 +203,21 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 - [x] **F4-1 sitemap y robots** (E8-H2, RF-067). `sitemap.php` (servido como `sitemap.xml` por `.htaccess`) y `robots.txt` que excluya `/admin`, `/backend` y el checkout.
   Hecho (15-11): `sitemap.php` (portada, 14 modelos, cada repuesto activo y páginas informativas; sin panel, checkout ni búsquedas), regla `/sitemap.xml` en `.htaccess` y `robots.txt` (excluye `/admin/`, `/backend/`, checkout, login, retorno de pago, mi pedido y búsquedas).
   Probado: `php tests/seo_test.php` TODO OK (7, 538 fichas = 538 activos); CP-47 con Apache real: `/sitemap.xml`, `/robots.txt` y la ficha en 200.
-- [ ] **F4-2 URLs legibles** (E8-H3, RF-068). `/repuestos/{modelo}/{slug}` reescrito a `producto.php`, con 301 desde `producto.php?id=`.
-- [ ] **F4-3 Google Analytics 4** (E8-H6, RF-071). Eventos `view_item`, `add_to_cart`, `begin_checkout` y del chat (apertura, búsqueda, WhatsApp). Necesita el ID de medición de GMG.
+- [x] **F4-2 URLs legibles** (E8-H3, RF-068). `/repuestos/{modelo}/{slug}` reescrito a `producto.php`, con 301 desde `producto.php?id=`.
+  Hecho (15-11): `/repuestos/{modelo}/{nombre}-{id}` reescrito a `producto.php` en el `.htaccess`, que además marca `GMG_REESCRITURA` para que PHP sepa que puede usar URLs legibles (con `php -S` sigue `producto.php?id=`). `producto.php?id=` y nombres viejos responden 301 a la URL correcta; la ficha usa `<base href>`. Tarjetas, relacionados, sugerencias, chat y sitemap usan `gmgUrlProducto()`.
+  Probado: CP-47 con Apache real (301, 200 con canonical y `<base>`, nombre viejo 301, id inexistente 404, tarjetas y sitemap con URLs legibles).
+- [x] **F4-3 Google Analytics 4** (E8-H6, RF-071). Eventos `view_item`, `add_to_cart`, `begin_checkout` y del chat (apertura, búsqueda, WhatsApp). Necesita el ID de medición de GMG.
+  Hecho (15-11): se activa con `GA4_ID=G-...` en el `.env` (sin ID no carga nada). `js/analitica.js` y llamadas en `cart.js` y `chat.js`: `view_item`, `add_to_cart` (tienda y chat), `begin_checkout`, `chat_abierto`, `chat_mensaje` (sin el texto) y `contacto_whatsapp`. CSP ampliada para Google Analytics y frase en la política de privacidad solo si está activo.
+  Probado: `php tests/analitica_test.php` TODO OK (7, sin enviar nada a Google). **Falta el ID de medición de GMG.**
 - [x] **F4-4 Filtros y orden** (E2-H8, RF-015). Precio, disponibilidad y orden por precio o nombre.
   Hecho (15-11): en el listado, orden (relevancia, precio menor o mayor, nombre), "Solo con stock" y precio desde/hasta (solo enteros); la paginación y "Quitar filtros" los conservan; con filtros la página es `noindex`.
   Probado: `php tests/filtros_test.php` TODO OK (9, recorre todas las páginas y compara con la base).
-- [ ] **F4-5 Importar CSV** (E6-H8, RF-057). Con el formato de `BD_v2/catalogo_repuestos.csv`; informe de filas con error; todo en una transacción.
-- [ ] **F4-6 Correos de pedido** (E3-H8, E7-H1, RF-026, RF-062). Correo al cliente y aviso interno cuando el pedido pasa a aprobado (no al crearse pendiente). Enviar el aviso de pedido nuevo después de responder al navegador.
+- [x] **F4-5 Importar CSV** (E6-H8, RF-057). Con el formato de `BD_v2/catalogo_repuestos.csv`; informe de filas con error; todo en una transacción.
+  Hecho (15-11): `admin/importar.php` (solo rol admin, enlace en Productos): formato de `BD_v2/catalogo_repuestos.csv`, actualiza por SKU o crea, vehículos por su descripción, "Solo revisar", todo o nada con informe por fila, acepta CSV de Excel en Windows-1252, auditoría.
+  Probado: `php tests/importar_csv_test.php` TODO OK (13; el catálogo real de 538 filas se importa en 2,4 s).
+- [x] **F4-6 Correos de pedido** (E3-H8, E7-H1, RF-026, RF-062). Correo al cliente y aviso interno cuando el pedido pasa a aprobado (no al crearse pendiente). Enviar el aviso de pedido nuevo después de responder al navegador.
+  Hecho (15-11): el aviso de pedido nuevo se envía después de responder al navegador (`register_shutdown_function` con `litespeed_finish_request`/`fastcgi_finish_request`; la preferencia de Mercado Pago no se tocó) y al aprobar llega además un aviso interno (`enviarCorreoPedidoAprobadoInterno`) con cliente, productos, total y botón de WhatsApp al cliente.
+  Probado: `php tests/pedido_correos_test.php` TODO OK (5); `checkout_stock` y `pedido_aprobar` en TODO OK. El envío después de responder solo se nota en Hostinger (LiteSpeed): pendiente de probar en servidor.
 - [x] **F4-7 Rendimiento** (E10-H8, RNF-020, RNF-043). Fuente con `<link rel="preconnect">` y 3 grosores; fotos de modelos en WebP; `loading="lazy"`; compresión y caché en `.htaccess`; listado del catálogo sin 6 subconsultas por fila.
   Hecho (15-11): la fuente pasa de `@import` con 6 grosores a `<link>` con `preconnect` y 3 grosores (el panel la pide en `admin.css`); fotos de modelos en WebP (1,3 MB a 466 KB) y `gmgModeloImagen()` usa la WebP si existe; `.htaccess` con compresión (`mod_deflate`) y caché (CSS y JS 1 año, se versionan con `?v=`; imágenes 1 mes). `loading="lazy"` ya estaba. No se rehízo el listado sin subconsultas: con 24 por página responde en 53 ms en local (si Hostinger es lento, retomar).
   Probado: CP-47 con Apache real (gzip en CSS y HTML, caché de 1 año y 1 mes); las 14 fotos de modelos se sirven en WebP; `csp_test` sin bloqueos con la fuente nueva.
@@ -215,13 +229,17 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 - [x] **F4-9 Datos personales** (E10-H6, RNF-037). Canal concreto para pedir acceso, rectificación o eliminación (correo o formulario) en la política y en el checkout.
   Hecho (15-11): sección "Tus derechos" (`#tus-derechos`) de la política con canal concreto (WhatsApp con mensaje armado y correo con asunto); en el formulario de pago, una línea sobre el uso de los datos con enlace a WhatsApp y a la política. No se agregó un plazo legal de respuesta (lo define GMG).
   Probado: revisión por HTTP de la política y del formulario (enlaces presentes, log vacío).
-- [ ] **F4-10 (Baja, solo si sobra tiempo)** E1-H6 cuentas, E1-H7 roles, E6-H11 banners, E6-H12 reportes CSV. E5-H14 Telegram: proponer descartarla.
+- [x] **F4-10 (Baja, solo si sobra tiempo)** E1-H6 cuentas, E1-H7 roles, E6-H11 banners, E6-H12 reportes CSV. E5-H14 Telegram: proponer descartarla.
+  Hecho (15-11): E1-H6 y E1-H7 `admin/usuarios.php` (crear con correo, rol admin o vendedor, activar; nadie se quita su rol ni se desactiva y siempre queda un admin; el rol y el estado se leen en cada página y desactivar corta la sesión; el vendedor ve dashboard, productos, pedidos y avisos, el resto responde 403); E6-H11 `admin/banners.php` (franja arriba de la tienda, solo enlaces del sitio, fecha de término, pausar); E6-H12 `admin/reportes.php` (pedidos por fechas y catálogo con stock en CSV para Excel, fórmulas neutralizadas). E5-H14 Telegram sigue descartada.
+  Probado: `php tests/cuentas_test.php` TODO OK (30 en total con F3-2).
 
 **Puerta de salida:** CP-49 y CP-50 exitosos; Lighthouse dentro de meta.
 
 ---
 
 **Estado al 15-11-2026 (noche):** Fase 3 hecha salvo F3-2 (restablecer contraseña) y F3-12 (Baja); Fase 4 hecha en F4-1, F4-4, F4-7, F4-8 y F4-9 (quedan F4-2 URLs legibles, F4-3 Analytics, que necesita el ID de GMG, F4-5 importar CSV, F4-6 correos de pedido aprobado, que toca el checkout junto a Mercado Pago, y F4-10). Toda la batería sin costo en TODO OK. Paquete de subida `dist/subida_final/` y guía en el punto 20 de los pendientes. Esquema de la presentación en `docs/evidencias/presentacion_final.md`. Siguiente: subida de Vicente (punto 20) y revisión de CP-47 en producción; después F3-2, F4-6 y F4-2.
+
+**Estado al 15-11-2026 (cierre del código):** 44 de 56 tareas hechas. Todo el código del plan está terminado y probado en local (Fases 0 a 4 completas: F3-2, F3-12, F4-2, F4-3, F4-5, F4-6 y F4-10 hechas en la segunda parte; F0-8 skills instaladas). Auditoría con `ponytail-audit` y `mobile-native`: 2 fallas de seguridad corregidas (mi pedido sin límite, feedback del chat sin dueño), código y CSS muerto borrados, campos de 16 px en celular. 38 pruebas automáticas sin costo en TODO OK (más la de IA real). Scripts nuevos para producción: `BD_v2/07`, `08` y `09`. Paquete `dist/subida_final/` (133 archivos, probado). Las 12 tareas abiertas (F0-2, F0-7, F1-1, F1-9, F5-1 a F5-8) son de una persona o del servidor y están paso a paso en `docs/GUIA_HOSTINGER_PASO_A_PASO.md`.
 
 ## Fase 5: pruebas, operación y entrega (11 a 18-12)
 
@@ -250,6 +268,8 @@ Aplicadas el 14-11 con la recomendación del plan (`docs/INSTRUCCIONES_CLAUDE_CO
 - [x] Sugerencias del buscador: 2 caracteres y 6 resultados (código y plan de pruebas) o 3 y 8 (SRS). **Decisión: 2 caracteres y 6 resultados**; el SRS se alinea en F5-7.
 
 ## Hallazgos fuera de tarea (anotados, no corregidos)
+
+- (15-11, auditoría con `ponytail-audit`) **Corregidos:** `mi-pedido.php` no limitaba los intentos (ahora 10 por IP cada 10 min, CP-23); cualquiera podía calificar cualquier respuesta del chat con solo su número (ahora solo la sesión dueña, 30 por IP cada 10 min). Probado con `tests/auditoria_publica_test.php`. **Limpieza:** se borraron 2 funciones sin uso (`gmgFechaChile`, `gmgModelosSugeridos`), 34 selectores CSS muertos del diseño anterior (unos 5 KB) y `dist/sitio_completo.zip` (copia vieja). Optimización móvil: campos de 16 px en celular (sin zoom en iPhone) y sin `:hover` pegado en pantallas táctiles. **Pendiente:** `arquitectura/08_admin_productos` aún nombra `gmgModelosSugeridos` (actualizar en F5-7); VL-16 del Plan de Pruebas espera que con 4 fotos se envíen 3, y el sitio rechaza con aviso (decidir con GMG).
 
 - (15-11, F2-7) `checkout.php` líneas 26 a 31: si un campo de `cliente` (nombre, RUT, teléfono...) llega como arreglo en el JSON, `trim()` lanza un error fatal (500) en PHP 8. No expone datos, pero conviene castear a texto. Corregir en F3-3 (límites por IP en `checkout.php`), sin tocar la preferencia de Mercado Pago.
 

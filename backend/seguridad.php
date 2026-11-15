@@ -76,9 +76,9 @@ function gmgAplicarSeguridadConexion() {
     // el mapa de Google (Contacto) e imágenes por HTTPS. 'unsafe-inline' se mantiene por los
     // onerror/onsubmit y el script del dashboard; sacarlos permitiría una política más estricta.
     // Mercado Pago y WhatsApp son navegaciones (no las limita esta política).
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; "
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; "
          . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
-         . "img-src 'self' data: blob: https:; connect-src 'self'; frame-src https://www.google.com; "
+         . "img-src 'self' data: blob: https:; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-src https://www.google.com; "
          . "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
     // El micrófono se usa para dictar en el chat; cámara, ubicación y pagos del navegador, no.
     header('Permissions-Policy: camera=(), geolocation=(), payment=(), microphone=(self)');

@@ -34,7 +34,40 @@ function requerirAdmin($prefijo = '') {
         header('Location: ' . $prefijo . 'login.php');
         exit;
     }
+    // Cuenta desactivada o borrada: sale de inmediato. El rol se lee de la base en cada página (F4-10).
+    global $conexion;
+    $idAdmin = (int)$_SESSION['admin_id'];
+    $stmt = $conexion->prepare("SELECT * FROM administradores WHERE id_admin = ?");
+    if ($stmt) {
+        $stmt->bind_param('i', $idAdmin);
+        $stmt->execute();
+        $cuenta = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$cuenta || (int)$cuenta['activo'] !== 1) {
+            gmgCerrarSesion();
+            header('Location: ' . $prefijo . 'login.php');
+            exit;
+        }
+        $_SESSION['admin_rol'] = $cuenta['rol'] ?? 'admin'; // sin la columna (antes de BD_v2/09) todos son admin
+    }
     $_SESSION['admin_ultimo'] = time();
+}
+
+/** ¿El usuario del panel tiene rol "admin" (todo el panel)? El rol "vendedor" ve productos, pedidos y avisos (F4-10). */
+function gmgEsAdminCompleto() {
+    return ($_SESSION['admin_rol'] ?? 'admin') === 'admin';
+}
+
+/** Para las pantallas solo de administradores: un vendedor ve un aviso y no la pantalla. */
+function requerirRolAdmin($prefijo = '../') {
+    requerirAdmin($prefijo);
+    if (!gmgEsAdminCompleto()) {
+        http_response_code(403);
+        echo '<!DOCTYPE html><html lang="es-CL"><head><meta charset="UTF-8"><title>Sin permiso</title></head><body style="font-family:sans-serif;padding:40px">'
+           . '<h1>Esta sección es solo para administradores</h1><p>Tu cuenta es de vendedor. Pídele acceso a un administrador.</p>'
+           . '<p><a href="index.php">Volver al panel</a></p></body></html>';
+        exit;
+    }
 }
 
 /** Cierra la sesión y borra su cookie del navegador. */

@@ -6,6 +6,7 @@
  */
 require_once 'backend/config.php';
 require_once 'backend/pagina_publica.php';
+require_once 'backend/datos.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 $base = gmgUrlBase();
@@ -14,9 +15,9 @@ if (isset($conexion) && !$conexion->connect_error) {
     foreach (gmgDatosModelosPublicos($conexion)['modelosInfo'] as $modelo) {
         $urls[] = [$base . '/index.php?modelo=' . rawurlencode($modelo['corto']), 'weekly', '0.8'];
     }
-    $r = $conexion->query("SELECT id_repuesto FROM repuestos WHERE activo = 1 ORDER BY id_repuesto");
-    while ($r && ($fila = $r->fetch_row())) {
-        $urls[] = [$base . '/producto.php?id=' . (int)$fila[0], 'weekly', '0.6'];
+    $r = $conexion->query("SELECT id, nombre, modelo FROM " . gmgSqlProductos() . " p WHERE p.activo = 1 ORDER BY id");
+    while ($r && ($fila = $r->fetch_assoc())) {
+        $urls[] = [$base . '/' . gmgUrlProducto($fila['id'], $fila['nombre'], $fila['modelo']), 'weekly', '0.6'];
     }
 }
 foreach (['quienes-somos.php', 'contacto.php', 'despacho.php', 'cambios-y-devoluciones.php', 'terminos-y-condiciones.php', 'politica-de-privacidad.php'] as $pagina) {

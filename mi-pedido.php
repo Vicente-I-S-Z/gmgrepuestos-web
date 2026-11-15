@@ -14,8 +14,8 @@ require_once 'backend/pagina_publica.php';
 $numeroPedido = '';
 $rutIngresado = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $numeroPedido = isset($_POST['numero']) ? trim((string)$_POST['numero']) : '';
-    $rutIngresado = isset($_POST['rut']) ? trim((string)$_POST['rut']) : '';
+    $numeroPedido = isset($_POST['numero']) && is_string($_POST['numero']) ? trim($_POST['numero']) : '';
+    $rutIngresado = isset($_POST['rut']) && is_string($_POST['rut']) ? trim($_POST['rut']) : '';
 }
 $buscado = ($_SERVER['REQUEST_METHOD'] === 'POST');
 
@@ -28,6 +28,9 @@ if ($buscado) {
     $idPedido = (int)$numeroPedido;
     if ($idPedido <= 0 || $rutIngresado === '') {
         $error = 'Ingresa tu número de pedido y tu RUT para buscar.';
+    } elseif (gmgLimiteSuperado($conexion, 'mi_pedido', 10, 600)) {
+        // Auditoría 15-11: sin límite se podían probar números y RUT sin freno (CP-23).
+        $error = 'Hiciste muchas consultas seguidas. Espera unos minutos o escríbenos por WhatsApp.';
     } else {
         $stmt = $conexion->prepare("SELECT * FROM " . gmgSqlPedidos() . " p WHERE p.id = ? LIMIT 1");
         $stmt->bind_param("i", $idPedido);

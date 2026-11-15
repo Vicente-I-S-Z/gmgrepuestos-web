@@ -38,10 +38,30 @@ function gmgFormularioAvisoStock($idProducto, $plegado = true) {
     echo $plegado ? '<details class="aviso-stock-plegado"><summary>🔔 Avísame cuando llegue</summary>' . $formulario . '</details>' : $formulario;
 }
 
-/** Fecha en formato chileno dd-mm-aaaa (historia E10-H14). */
-function gmgFechaChile($fecha = null) {
-    $marca = $fecha === null ? time() : (is_numeric($fecha) ? (int)$fecha : strtotime($fecha));
-    return $marca ? date('d-m-Y', $marca) : '';
+/** Texto a "slug" para URLs: "Óptica delantera 3ª gen." -> "optica-delantera-3a-gen". */
+function gmgSlug($texto) {
+    $texto = mb_strtolower(trim((string)$texto), 'UTF-8');
+    $texto = strtr($texto, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n', 'ª' => 'a', 'º' => 'o']);
+    return trim(preg_replace('/[^a-z0-9]+/', '-', $texto), '-');
+}
+
+/** ¿El servidor reescribe URLs? Lo marca el .htaccess (Apache o LiteSpeed); php -S no lo hace (F4-2). */
+function gmgReescrituraActiva() {
+    return !empty($_SERVER['GMG_REESCRITURA']) || !empty($_SERVER['REDIRECT_GMG_REESCRITURA']);
+}
+
+/**
+ * Dirección de la ficha de un repuesto, relativa al sitio (F4-2, E8-H3, RF-068):
+ * "repuestos/swift/optica-delantera-derecha-swift-3a-gen-255" si el servidor reescribe URLs,
+ * o "producto.php?id=255" si no (ambiente local). $modelos: texto "Baleno, Swift" (se usa el primero).
+ */
+function gmgUrlProducto($id, $nombre, $modelos = '') {
+    $id = (int)$id;
+    if (!gmgReescrituraActiva()) {
+        return 'producto.php?id=' . $id;
+    }
+    $modelo = gmgSlug(explode(',', (string)$modelos)[0]) ?: 'suzuki';
+    return 'repuestos/' . $modelo . '/' . (gmgSlug($nombre) ?: 'repuesto') . '-' . $id;
 }
 
 /**
@@ -88,6 +108,7 @@ function gmgDatosModelosPublicos($conexion) {
  *   og_tipo      Tipo para redes sociales (por defecto "website"; la ficha usa "product").
  *   og_imagen    Dirección absoluta de la imagen para redes sociales (opcional).
  *   json_ld      Datos estructurados para buscadores (arreglo; se imprime como JSON-LD).
+ *   base         true: agrega <base href> a la raíz del sitio (la ficha con URL legible, F4-2).
  */
 function gmgCabeceraPublica(array $o = []) {
     $titulo = $o['titulo_completo'] ?? (($o['titulo'] ?? 'Inicio') . ' - GMG Repuestos');
@@ -99,6 +120,9 @@ function gmgCabeceraPublica(array $o = []) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<?php if (!empty($o['base'])): ?>
+    <base href="<?php echo gmgH(gmgUrlBase()); ?>/">
+<?php endif; ?>
     <title><?php echo gmgH($titulo); ?></title>
     <meta name="description" content="<?php echo gmgH($descripcion); ?>">
 <?php if (!empty($o['canonical'])): ?>
@@ -124,6 +148,10 @@ function gmgCabeceraPublica(array $o = []) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap">
+<?php $ga4 = (string)gmgEnv('GA4_ID', ''); if (preg_match('/^G-[A-Z0-9]{4,20}$/', $ga4)): // F4-3: solo con el ID de GMG en el .env ?>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo gmgH($ga4); ?>"></script>
+    <script>window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '<?php echo gmgH($ga4); ?>', { anonymize_ip: true });</script>
+<?php endif; ?>
 <?php foreach ($css as $hoja): ?>
     <link rel="stylesheet" href="<?php echo gmgH($hoja); ?>?v=<?php echo gmgVersionArchivo($hoja); ?>">
 <?php endforeach; ?>
@@ -147,6 +175,18 @@ function gmgCabeceraPublica(array $o = []) {
         </div>
     </header>
 <?php
+    // Banners del panel (F4-10, E6-H11): activos y vigentes, máximo 2, el más nuevo primero.
+    global $conexion;
+    $banners = [];
+    if (isset($conexion) && $conexion instanceof mysqli && !$conexion->connect_error) {
+        $r = @$conexion->query("SELECT mensaje, enlace FROM banners WHERE activo = 1 AND (vigente_hasta IS NULL OR vigente_hasta >= CURDATE()) ORDER BY creado_en DESC LIMIT 2");
+        $banners = $r ? $r->fetch_all(MYSQLI_ASSOC) : []; // sin la tabla (antes de BD_v2/09) no se muestra nada
+    }
+    foreach ($banners as $banner) {
+        $texto = gmgH($banner['mensaje']);
+        echo '    <div class="banner-tienda" role="note">' . ($banner['enlace'] ? '<a href="' . gmgH($banner['enlace']) . '">' . $texto . ' →</a>' : $texto) . "</div>
+";
+    }
 }
 
 /**
@@ -223,7 +263,7 @@ function gmgPiePublico($conexion, array $o = []) {
     $bienvenidaChat = $contacto['bienvenida'] ?? ''; // F3-8: editable en el panel "Asistente"
     require __DIR__ . '/parciales/widgets_tienda.php';
 
-    $scripts = array_merge(['js/cart.js', 'js/chat.js'], $o['scripts'] ?? []);
+    $scripts = array_merge(['js/analitica.js', 'js/cart.js', 'js/chat.js'], $o['scripts'] ?? []);
     foreach ($scripts as $script) {
         echo '    <script src="' . gmgH($script) . '?v=' . gmgVersionArchivo($script) . '"></script>' . "\n";
     }

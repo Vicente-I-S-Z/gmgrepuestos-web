@@ -9,7 +9,7 @@
  * Mercado Pago.
  */
 require_once '../backend/auth.php';
-requerirAdmin('../');
+requerirRolAdmin('../'); // solo rol admin (F4-10)
 require_once '../backend/config.php';
 require_once '../backend/admin_ui.php';
 

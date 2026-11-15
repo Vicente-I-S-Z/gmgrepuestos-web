@@ -121,15 +121,6 @@ function gmgModelosConProductos($conexion) {
     return $lista;
 }
 
-/** Todos los modelos activos (con o sin repuestos), con la marca adelante. */
-function gmgModelosSugeridos($conexion) {
-    $lista = [];
-    foreach (gmgCargarModelos($conexion) as $fila) {
-        $lista[] = $fila['marca'] . ' ' . $fila['nombre'];
-    }
-    return $lista;
-}
-
 /** Une una lista de textos en formato "A, B y C". */
 function gmgUnirConY(array $items) {
     $items = array_values(array_filter($items, function ($i) { return $i !== ''; }));

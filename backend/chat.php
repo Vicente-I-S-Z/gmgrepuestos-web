@@ -132,9 +132,9 @@ if (!empty(AI_API_KEY)) {
         // Las tarjetas de producto son solo los resultados reales de buscar_productos.
         $repuestosSugeridos = $respuestaAPI['productos_encontrados'] ?? [];
         // Botón "Ver ficha" en cada tarjeta, apenas exista la página del producto (F2-4).
-        $hayFicha = is_file(__DIR__ . '/../producto.php');
+        require_once __DIR__ . '/pagina_publica.php';
         foreach ($repuestosSugeridos as &$repuesto) {
-            $repuesto['url_ficha'] = $hayFicha ? 'producto.php?id=' . (int)$repuesto['id'] : null;
+            $repuesto['url_ficha'] = gmgUrlProducto($repuesto['id'], $repuesto['nombre'], $repuesto['modelo'] ?? ''); // F4-2
         }
         unset($repuesto);
 

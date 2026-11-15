@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once 'config.php';
 require_once 'datos.php';
 require_once 'chat_busqueda.php';
+require_once 'pagina_publica.php';
 
 // Límite por IP (F3-3, RNF-035): 60 por minuto (se pide mientras el cliente escribe).
 if (gmgLimiteSuperado($conexion, 'sugerencias', 60, 60)) {
@@ -42,6 +43,7 @@ if ($stmt) {
             'imagen' => $fila['imagen_url'] ?: 'img/placeholder-repuesto.svg',
             'modelo' => (string)$fila['modelo'],
             'categoria' => $fila['categoria'],
+            'url' => gmgUrlProducto($fila['id'], $fila['nombre'], $fila['modelo']), // F4-2
         ];
     }
     $stmt->close();

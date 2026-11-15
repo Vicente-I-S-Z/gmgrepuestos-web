@@ -150,7 +150,7 @@ En producción existe la columna `pedidos.metodo_entrega` (la agregó un script 
 
 ## 12. Subir la Fase 0 a Hostinger (F0-4, F0-5 y F0-6)
 
-**Incidente del 14-11 (no repetir):** se subió `subida_fase0.zip` y se usó "Extraer" en el Administrador de archivos. El resultado fue un `public_html` con solo los 11 archivos del zip y el sitio quedó caído (portada 403, login 500). Vicente lo restauró y Claude Code comprobó desde afuera que la tienda volvió (118 productos del Swift, CSS, JS e imágenes en 200), pero con la versión antigua. **No usar "Extraer" para subidas parciales:** los archivos se suben sueltos, carpeta por carpeta. El zip quedó obsoleto; `dist/sitio_completo.zip` (sitio completo desde el PC) queda solo para emergencias.
+**Incidente del 14-11 (no repetir):** se subió `subida_fase0.zip` y se usó "Extraer" en el Administrador de archivos. El resultado fue un `public_html` con solo los 11 archivos del zip y el sitio quedó caído (portada 403, login 500). Vicente lo restauró y Claude Code comprobó desde afuera que la tienda volvió (118 productos del Swift, CSS, JS e imágenes en 200), pero con la versión antigua. **No usar "Extraer" para subidas parciales:** los archivos se suben sueltos, carpeta por carpeta. El zip quedó obsoleto. (El antiguo `dist/sitio_completo.zip` se borró el 15-11: lo reemplaza `dist/subida_final/` y el respaldo del punto 20.A.)
 
 Archivos listos en `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_fase0\` (11, idénticos al proyecto). No hay SQL que ejecutar antes.
 
@@ -273,6 +273,8 @@ Agrega la columna `pedidos.stock_descontado_en`. Sin ella, el panel nuevo no pue
 - [ ] 3. Revisa: `SHOW COLUMNS FROM pedidos LIKE 'stock_descontado_en';` muestra una fila.
 
 ## 20. SUBIDA COMPLETA A HOSTINGER (15-11, para la presentación)
+
+**Reemplazado por `docs/GUIA_HOSTINGER_PASO_A_PASO.md`** (versión final del 15-11: 133 archivos, scripts 07, 08 y 09, configuración del panel y todas las tareas que hace una persona). Lo de abajo quedó desactualizado; no lo sigas.
 
 Todo el código de las Fases 0 a 4 (lo hecho hasta hoy) en **una sola subida**: `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_final\` (127 archivos, 3,3 MB, sin `.env`, `docs/`, `tests/` ni nada interno). Probado en local: 49 PHP sin errores, 15 rutas en orden y log vacío. Tiempo estimado: 30 a 40 minutos.
 

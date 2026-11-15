@@ -47,6 +47,9 @@ $correoContacto = gmgConocimiento($conexion, 'email');
             <h2>Cuánto tiempo guardamos tus datos</h2>
             <p>Los conservamos mientras sea necesario para gestionar tu compra, atender reclamos o garantías y cumplir con las obligaciones legales y tributarias. Después, se eliminan o se dejan sin identificar.</p>
             <p>Las conversaciones con el Asistente Virtual se borran automáticamente 12 meses después del último mensaje.</p>
+<?php if (preg_match('/^G-[A-Z0-9]{4,20}$/', (string)gmgEnv('GA4_ID', ''))): // F4-3 ?>
+            <p>Medimos las visitas con Google Analytics (páginas vistas, productos agregados al carrito y uso del chat) para mejorar la tienda. No enviamos tu nombre, RUT, correo ni lo que escribes en el chat.</p>
+<?php endif; ?>
 
             <h2 id="tus-derechos">Tus derechos</h2>
             <p>Puedes pedirnos en cualquier momento <strong>acceder</strong> a tus datos, <strong>corregirlos</strong>, <strong>eliminarlos</strong> o <strong>oponerte</strong> a que los usemos para un fin determinado, salvo cuando la ley nos obligue a conservarlos.</p>

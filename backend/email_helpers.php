@@ -318,3 +318,33 @@ HTML;
     $marcar->close();
     return $enviados;
 }
+
+/**
+ * Aviso interno al aprobar un pedido (F4-6, E3-H8, E7-H1, RF-026, RF-062): llega al correo de la tienda
+ * con el cliente, su contacto y los productos, para coordinar la entrega por WhatsApp. Al crearse el
+ * pedido (pendiente) solo se avisa "pedido nuevo"; este correo es el de "ya se puede entregar".
+ */
+function enviarCorreoPedidoAprobadoInterno($conexion, $pedidoId, ?callable $enviar = null) {
+    $enviar = $enviar ?? 'emailEnviar'; // las pruebas pasan uno falso
+    $pedido = emailObtenerPedidoConItems($conexion, $pedidoId);
+    if (!$pedido) {
+        return ['success' => false, 'error' => "Pedido #$pedidoId no encontrado"];
+    }
+    $cliente = htmlspecialchars(trim(($pedido['nombre_cliente'] ?? '') . ' ' . ($pedido['apellido_cliente'] ?? '')), ENT_QUOTES, 'UTF-8');
+    $telefono = htmlspecialchars($pedido['telefono_cliente'] ?: '—', ENT_QUOTES, 'UTF-8');
+    $correo = htmlspecialchars($pedido['email_cliente'] ?: '—', ENT_QUOTES, 'UTF-8');
+    $total = number_format((float)$pedido['total'], 0, ',', '.');
+    $tablaItems = emailTablaItems($pedido['items']);
+    $digitos = preg_replace('/\D/', '', (string)($pedido['telefono_cliente'] ?? ''));
+    $enlaceCliente = $digitos !== '' ? 'https://wa.me/' . $digitos . '?text=' . rawurlencode("Hola, te escribimos de GMG Repuestos por tu pedido #{$pedidoId} para coordinar la entrega.") : '';
+    $boton = $enlaceCliente !== '' ? '<p style="margin-top:20px;"><a href="' . htmlspecialchars($enlaceCliente, ENT_QUOTES, 'UTF-8') . '" style="display:inline-block; background:#25D366; color:#0B3D1E; padding:10px 20px; border-radius:4px; text-decoration:none; font-weight:bold;">Escribir al cliente por WhatsApp</a></p>' : '';
+    $contenido = <<<HTML
+<h2 style="color:#111; margin-top:0;">Pedido #{$pedidoId} aprobado: coordinar la entrega</h2>
+<p>Cliente: <strong>{$cliente}</strong> · Teléfono: {$telefono} · Correo: {$correo}</p>
+{$tablaItems}
+<p style="text-align:right; font-size:1.1rem;"><strong>Total: \${$total}</strong></p>
+<p>El stock de estos productos ya se descontó al aprobar.</p>
+{$boton}
+HTML;
+    return $enviar(ADMIN_NOTIFICATION_EMAIL, 'GMG Repuestos - Panel', "Pedido #{$pedidoId} aprobado: coordinar entrega", emailPlantillaBase($contenido));
+}

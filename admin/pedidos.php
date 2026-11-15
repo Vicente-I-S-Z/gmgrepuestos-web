@@ -31,6 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
             // pedido manualmente. Si el correo falla, no debe interrumpir
             // el panel, por eso se ignora silenciosamente cualquier error.
             enviarCorreoActualizacionPedido($conexion, $id, $nuevoEstado);
+            if ($nuevoEstado === 'aprobado') {
+                enviarCorreoPedidoAprobadoInterno($conexion, $id); // aviso interno para coordinar la entrega (F4-6)
+            }
         }
     }
 }

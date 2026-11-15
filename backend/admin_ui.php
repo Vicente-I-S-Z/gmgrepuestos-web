@@ -49,8 +49,16 @@ function gmgAdminEnlaces($activo = '') {
         'catalogo'  => ['catalogo.php', 'Catálogo'],
         'asistente' => ['conocimiento.php', 'Asistente'],
         'avisos'    => ['avisos.php', 'Avisos de stock'],
+        'banners'   => ['banners.php', 'Banners'],
+        'reportes'  => ['reportes.php', 'Reportes'],
+        'usuarios'  => ['usuarios.php', 'Usuarios'],
     ];
+    // El rol vendedor solo ve estas pantallas (F4-10, E1-H7).
+    $deVendedor = ['dashboard', 'productos', 'pedidos', 'avisos'];
     foreach ($enlaces as $clave => $datos) {
+        if (function_exists('gmgEsAdminCompleto') && !gmgEsAdminCompleto() && !in_array($clave, $deVendedor, true)) {
+            continue;
+        }
         echo '                <a href="' . gmgAdminH($datos[0]) . '"' . ($clave === $activo ? ' class="active"' : '') . '>' . gmgAdminH($datos[1]) . "</a>\n";
     }
 }

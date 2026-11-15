@@ -76,11 +76,37 @@ done
 echo "== Sitio público (200) y panel (302 al login) =="
 for r in "" "index.php" "index.php?modelo=swift" "login.php" "contacto.php" "mi-pedido.php" \
          "css/style.css" "js/chat.js" "img/fronx.jpg" \
-         "backend/buscar_sugerencias.php?q=filtro" "backend/chat.php" "sitemap.xml" "robots.txt" "producto.php?id=1"; do
+         "backend/buscar_sugerencias.php?q=filtro" "backend/chat.php" "sitemap.xml" "robots.txt"; do
     esperar 200 "$r"
 done
 esperar 302 "admin/"
 esperar 404 "no-existe-esta-pagina.php"
+
+echo "== URLs legibles (F4-2) =="
+ubicacion() { curl -s -o /dev/null -w '%{redirect_url}' "$U/$1"; }
+codigo() { curl -s -o /dev/null -w '%{http_code}' "$U/$1"; }
+verificar() { # condición (0 = ok), descripción
+    if [ "$1" -eq 0 ]; then printf "ok     %s
+" "$2"; else printf "FALLA  %s
+" "$2"; FALLAS=$((FALLAS + 1)); fi
+}
+LEGIBLE="$(ubicacion 'producto.php?id=255')"
+[ "$(codigo 'producto.php?id=255')" = "301" ] && echo "$LEGIBLE" | grep -q '/repuestos/swift/optica-delantera-derecha-swift-3a-gen-255$'
+verificar $? "producto.php?id=255 -> 301 a ${LEGIBLE#$U}"
+RUTA="${LEGIBLE#$U/}"
+FICHA="$(curl -s "$U/$RUTA")"
+[ "$(codigo "$RUTA")" = "200" ] && echo "$FICHA" | grep -q "<base href=\"$U/\">" && echo "$FICHA" | grep -q "rel=\"canonical\" href=\"$LEGIBLE\""
+verificar $? "la URL legible responde 200 con <base> y canonical propia"
+[ "$(codigo 'css/style.css')" = "200" ] && echo "$FICHA" | grep -q 'href="css/style.css'
+verificar $? "los recursos de la ficha siguen siendo relativos a la raíz"
+[ "$(codigo 'repuestos/swift/nombre-viejo-255')" = "301" ] && [ "$(ubicacion 'repuestos/swift/nombre-viejo-255')" = "$LEGIBLE" ]
+verificar $? "un nombre viejo redirige (301) a la URL correcta"
+[ "$(codigo 'repuestos/swift/no-existe-999999')" = "404" ]
+verificar $? "un id inexistente responde 404"
+curl -s "$U/index.php?modelo=swift" | grep -q 'href="repuestos/swift/'
+verificar $? "las tarjetas de la tienda enlazan a URLs legibles"
+curl -s "$U/sitemap.xml" | grep -q "<loc>$U/repuestos/"
+verificar $? "el sitemap usa URLs legibles"
 
 echo "== Rendimiento (F4-7): compresión y caché =="
 cabecera() { # texto esperado en las cabeceras, ruta, descripción

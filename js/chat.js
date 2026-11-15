@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     function toggleChat() {
         chatWindow.classList.toggle('active');
+        if (chatWindow.classList.contains('active') && window.gmgEvento) window.gmgEvento('chat_abierto'); // F4-3
         if (chatToggleBtn) chatToggleBtn.setAttribute('aria-expanded', chatWindow.classList.contains('active') ? 'true' : 'false');
         if (chatWindow.classList.contains('active')) {
             chatHasBeenOpened = true;
@@ -102,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function abrirChat() {
+        if (!chatWindow.classList.contains('active') && window.gmgEvento) window.gmgEvento('chat_abierto'); // F4-3
         chatWindow.classList.add('active');
         if (chatToggleBtn) chatToggleBtn.setAttribute('aria-expanded', 'true');
         chatHasBeenOpened = true;
@@ -302,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     async function enviarMensaje(texto, atajo) {
         if (isWaitingResponse) return;
+        if (window.gmgEvento) window.gmgEvento('chat_mensaje', { atajo: atajo || '' }); // F4-3 (no se envía el texto)
 
         const filesToSend = currentSelectedFiles.slice();
         const dataUrlsToSend = filesToSend.map(f => f.dataUrl).filter(Boolean);
@@ -600,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     await fetch('backend/feedback_mensaje.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mensaje_id: mensajeId, feedback: feedback })
+                        body: JSON.stringify({ mensaje_id: mensajeId, feedback: feedback, sesion_id: sesionId })
                     });
                 } catch (e) {
                     // Silencioso: el feedback es un extra, no bloquea la conversación

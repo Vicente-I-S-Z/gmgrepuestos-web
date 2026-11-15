@@ -289,7 +289,10 @@ $idCategoriaActual = (int)($productoEditar['id_categoria'] ?? 0);
             <div class="admin-heading">
                 <h1>Productos</h1>
                 <?php if (!$mostrarFormulario): ?>
-                    <a href="productos.php?nuevo=1&modelo=<?php echo urlencode($modeloSeleccionado); ?>" class="btn-admin">+ Nuevo producto</a>
+                    <div class="table-actions">
+                        <?php if (gmgEsAdminCompleto()): ?><a href="importar.php" class="btn-admin btn-secundario">Importar CSV</a><?php endif; ?>
+                        <a href="productos.php?nuevo=1&modelo=<?php echo urlencode($modeloSeleccionado); ?>" class="btn-admin">+ Nuevo producto</a>
+                    </div>
                 <?php else: ?>
                     <a href="productos.php?modelo=<?php echo urlencode($modeloSeleccionado); ?>" class="btn-admin btn-secundario">← Volver al listado</a>
                 <?php endif; ?>

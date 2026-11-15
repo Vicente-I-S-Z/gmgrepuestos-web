@@ -73,7 +73,18 @@ if (stripos($ultimoUsuario, 'insiste') !== false) {
     responder(pedirBusqueda());
 }
 if ($tieneResultadoHerramienta) {
+    // F3-12: si lo que volvió es de consultar_pedido, se repite tal cual para que la prueba lo vea.
+    foreach ($entrada as $item) {
+        if (($item['type'] ?? '') === 'function_call_output' && ($item['call_id'] ?? '') === 'call_pedido') {
+            responder(mensaje('Resultado del pedido: ' . ($item['output'] ?? '')));
+        }
+    }
     responder(mensaje('Tengo estas opciones para tu Swift 2019 (respuesta falsa).'));
+}
+// F3-12: "consulta pedido N con DATO" pide la herramienta consultar_pedido.
+if (preg_match('/consulta pedido (\d+) con (\S+)/i', $ultimoUsuario, $m)) {
+    responder([['type' => 'function_call', 'id' => 'fc_pedido', 'call_id' => 'call_pedido', 'name' => 'consultar_pedido',
+                'arguments' => json_encode(['numero_pedido' => (int)$m[1], 'correo_o_rut' => $m[2]])]]);
 }
 if (stripos($ultimoUsuario, 'provoca error') !== false) {
     responder([], 500);

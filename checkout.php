@@ -271,14 +271,21 @@ if ($errorRegistro || $pedidoId <= 0) {
     exit;
 }
 
-// Aviso al administrador: pedido nuevo esperando revisión y aprobación.
-// Si el correo falla (SMTP mal configurado, etc.) no debe interrumpir
-// el checkout, por eso se ignora silenciosamente cualquier error aquí.
-try {
-    enviarCorreoNuevoPedido($conexion, $pedidoId);
-} catch (Throwable $e) {
-    error_log('[GMG Checkout] No se pudo enviar el aviso de pedido nuevo: ' . $e->getMessage());
-}
+// Aviso al administrador: pedido nuevo esperando revisión y aprobación (F4-6).
+// Se envía DESPUÉS de responder al navegador: el cliente no espera al servidor de correo
+// (hasta 15 s si está lento). Si el correo falla, no afecta la compra.
+register_shutdown_function(function () use ($conexion, $pedidoId) {
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    } elseif (function_exists('litespeed_finish_request')) {
+        litespeed_finish_request(); // Hostinger (LiteSpeed)
+    }
+    try {
+        enviarCorreoNuevoPedido($conexion, $pedidoId);
+    } catch (Throwable $e) {
+        error_log('[GMG Checkout] No se pudo enviar el aviso de pedido nuevo: ' . $e->getMessage());
+    }
+});
 
 // Preparar solicitud a Mercado Pago
 $base_url = $baseSitio;

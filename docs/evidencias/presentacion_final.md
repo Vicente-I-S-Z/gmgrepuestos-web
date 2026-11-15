@@ -52,7 +52,7 @@ Plan B si falla internet o la IA: capturas o video grabado de los mismos pasos *
 ## Lámina 7. Resultados de pruebas
 
 - **Asistente con la IA real** (39 casos × 3 repeticiones): 39 de 39 correctos; producto correcto en el top 3 en el **100 %** (meta 80 %); **0** precios o SKU inventados; tiempo de respuesta p90 **3,9 s** (meta 15 s).
-- **33 pruebas automáticas** con **388 verificaciones**, todas en "TODO OK": búsqueda, checkout con stock y bloqueo `FOR UPDATE` (CP-15), CSRF del panel (CP-42), bloqueos del `.htaccess` con Apache real (CP-47), login con bloqueo por fuerza bruta (CP-38), entradas maliciosas en el buscador (CP-06), subidas de archivos inválidas (CP-46), accesibilidad (contraste ≥ 4,5:1) y CSP sin bloqueos.
+- **39 pruebas automáticas** (38 sin costo, todas en "TODO OK", y 1 con la IA real) con **452 verificaciones**: búsqueda, checkout con stock y bloqueo `FOR UPDATE` (CP-15), CSRF del panel (CP-42), bloqueos del `.htaccess` con Apache real (CP-47), login con bloqueo por fuerza bruta (CP-38), entradas maliciosas en el buscador (CP-06), subidas de archivos inválidas (CP-46), accesibilidad (contraste ≥ 4,5:1) y CSP sin bloqueos.
 - Casos del Plan de Pruebas v2 cubiertos con prueba automática: CP-03 a CP-06, CP-15, CP-34, CP-36, CP-37, CP-38, CP-40, CP-41, CP-42, CP-46, CP-47 y valores límite VL-13, VL-17 y VL-18. (VL-16 difiere: con 4 fotos el sitio las rechaza con un aviso en vez de enviar 3; decidir con GMG si se ajusta el plan o el sitio.)
 - **[completar]** resultados en producción tras la subida (CP-47 en el sitio real, prueba con el cliente).
 
