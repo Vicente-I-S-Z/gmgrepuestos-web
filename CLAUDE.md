@@ -25,7 +25,7 @@ Fecha de término del proyecto: 18-12-2026.
 | `backend/` | Lógica: `config.php`, `entorno.php` (lee `.env`), `datos.php` (consultas), `chat*.php` (asistente), `admin_ui.php` (CSRF y cabecera del panel) |
 | `js/`, `css/` | `chat.js`, `cart.js`, `tienda.js`, `model-carousel.js` y sus estilos |
 | `BD_v2/` | Scripts SQL numerados (`01_estructura.sql`, `02_datos_catalogo.sql`, ...) y `catalogo_repuestos.csv` |
-| `docs/` | Plan, fix de la IA y lo que falta integrar de la referencia (`docs/referencia/`) |
+| `docs/` | Plan, fix de la IA, instrucciones del cierre y pendientes de Vicente |
 | `tests/` | Pruebas automáticas (búsqueda del chat, CP-42, CP-47) y Apache de prueba (no se publica) |
 | `arquitectura/` | Documentación 4+1 en HTML (no se publica) |
 
@@ -36,7 +36,7 @@ Fecha de término del proyecto: 18-12-2026.
 - Búsqueda contra el catálogo real (necesita `pdo_sqlite`): `php tests/chat_busqueda_sqlite_test.php BD_v2/catalogo_repuestos.csv`
 - Búsqueda, historial y límites contra MariaDB local (no deja cambios): `php tests/chat_busqueda_mariadb_test.php`
 - Herramienta `buscar_productos` del chat contra MariaDB (no deja cambios): `php tests/chat_herramienta_test.php`
-- Chat de punta a punta con una API de OpenAI falsa (`tests/fake_openai.php`, sin gastar tokens): `php tests/chat_historial_test.php`
+- Chat de punta a punta con una API de OpenAI falsa (`tests/fake_openai.php`, sin gastar tokens): `php tests/chat_historial_test.php` (historial) y `php tests/chat_api_test.php` (tiempos, reintento, rondas y carrito; tarda unos 40 s)
 - CSRF del panel (CP-42): `bash tests/cp42_csrf_panel.sh`; bloqueos del `.htaccess` con Apache real (CP-47): `bash tests/cp47_htaccess.sh`
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).
 

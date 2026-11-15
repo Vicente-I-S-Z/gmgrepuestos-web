@@ -266,75 +266,31 @@ function chatExtraerNotificarStock(&$texto) {
     return $productoId;
 }
 
-function chatFiltrarProductosPorTexto($texto, $productos) {
-    $encontrados = [];
-    $txtLower = mb_strtolower($texto, 'UTF-8');
-    foreach ($productos as $p) {
-        if (stripos($txtLower, mb_strtolower($p['sku'], 'UTF-8')) !== false ||
-            (stripos($txtLower, mb_strtolower($p['nombre'], 'UTF-8')) !== false && stripos($txtLower, mb_strtolower((string)$p['modelo'], 'UTF-8')) !== false)) {
-            $encontrados[] = $p;
-        }
-    }
-    return array_values($encontrados);
-}
-
 // =========================================================
-// 5) Orquestación de la llamada a la IA (function calling con
-//    respaldo). Separado en funciones para poder probarse sin red.
+// 5) Orquestación de la llamada a la IA (Responses API con la herramienta
+//    buscar_productos). Sin respaldo con el catálogo completo: si la IA no
+//    responde a tiempo, el cliente recibe la salida a WhatsApp (F1-5, INC-01).
 // =========================================================
 
 /**
- * Orquesta la consulta a la IA: intenta primero con "tools" (function
- * calling) para que el modelo consulte el catálogo real en vivo; si la API
- * no soporta ese formato o falla, cae de respaldo al método anterior
- * (catálogo completo pegado como texto, sin tools).
+ * Consulta a la IA con presupuesto de tiempo (RNF-012): $limiteHasta es
+ * microtime(true) + 25 al empezar el mensaje. La entrada es el prompt con la
+ * base de conocimiento, el historial leído de la base y el mensaje actual.
+ * Devuelve ['success' => true, 'reply', 'productos_encontrados', 'debug_busquedas', 'debug_modo']
+ * o ['success' => false, 'error', 'http_code'].
  */
-function chatConsultarIA($mensaje, $imagenes, $historial, $productos, $conexion) {
+function chatConsultarIA($mensaje, $imagenes, $historial, $conexion, $limiteHasta) {
     // Al prompt base se le suman la base de conocimiento, la regla de preguntar
     // modelo y año y la lista actual de modelos (ver backend/conocimiento.php).
     $contextoNegocio = gmgContextoNegocioParaIA($conexion, chatModelosCortos($conexion));
-    $mensajesBase = chatArmarMensajesBase(AI_SYSTEM_PROMPT . $contextoNegocio, $historial, $mensaje, $imagenes);
+    $entrada = chatArmarMensajesBase(AI_SYSTEM_PROMPT . $contextoNegocio, $historial, $mensaje, $imagenes);
     $herramientas = chatDefinicionHerramientas();
 
-    $resultado = chatLlamarResponsesAPI($mensajesBase, $herramientas);
-
-    if ($resultado['success']) {
-        return chatResolverToolCalls($resultado, $mensajesBase, $herramientas, $conexion, 0);
-    }
-
-    // El motivo real del primer intento se registra siempre: antes solo quedaba
-    // el del intento de respaldo, que podía ocultar la causa verdadera.
-    error_log('[GMG Chat] Falló la consulta a la IA (con herramientas): ' . ($resultado['error'] ?? 'desconocido'));
-
-    // Si el problema es de conexión, de la clave o de la cuenta, repetir la
-    // llamada sin herramientas fallaría igual y solo haría esperar al cliente
-    // el doble. El respaldo se usa solo cuando el fallo puede venir del formato.
-    if (chatErrorSinRespaldo($resultado)) {
+    $resultado = chatLlamarResponsesAPI($entrada, $herramientas, (float)$limiteHasta);
+    if (!$resultado['success']) {
         return $resultado;
     }
-
-    // --- Respaldo: sin tools, catálogo completo como texto (comportamiento anterior) ---
-    $catalogoJson = json_encode($productos, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    $systemPromptRespaldo = str_replace('{CATALOGO_JSON}', $catalogoJson, AI_SYSTEM_PROMPT_FALLBACK) . $contextoNegocio;
-    $mensajesRespaldo = chatArmarMensajesBase($systemPromptRespaldo, $historial, $mensaje, $imagenes);
-
-    $resultadoRespaldo = chatLlamarResponsesAPI($mensajesRespaldo, null);
-    if (!$resultadoRespaldo['success']) {
-        return $resultadoRespaldo;
-    }
-    $texto = chatExtraerTextoDeRespuesta($resultadoRespaldo['data']);
-    return ['success' => true, 'reply' => $texto, 'productos_encontrados' => [], 'debug_busquedas' => null, 'debug_modo' => 'respaldo_sin_tools'];
-}
-
-/**
- * ¿El fallo de la API es de conexión, de la clave o de la cuenta? Es decir:
- * sin conexión o tiempo agotado (código HTTP 0), clave inválida (401), sin
- * permisos (403) o sin saldo / demasiadas peticiones (429). En esos casos
- * intentar de nuevo sin herramientas no sirve de nada.
- */
-function chatErrorSinRespaldo($resultado) {
-    $codigo = (int)($resultado['http_code'] ?? 0);
-    return $codigo === 0 || in_array($codigo, [401, 403, 429], true);
+    return chatResolverToolCalls($resultado, $entrada, $herramientas, $conexion, (float)$limiteHasta);
 }
 
 /**
@@ -390,171 +346,136 @@ function chatArmarMensajesBase($systemPrompt, $historial, $mensaje, $imagenes) {
     return $mensajes;
 }
 
-function chatLlamarResponsesAPI($mensajes, $herramientas) {
+/**
+ * Llamada a la Responses API con presupuesto de tiempo y 1 reintento
+ * (RNF-012). $limiteHasta = microtime(true) + 25 al empezar el mensaje.
+ * Sin reasoning.summary ni reasoning.mode: el código nunca los lee.
+ */
+function chatLlamarResponsesAPI(array $entrada, ?array $herramientas, float $limiteHasta): array {
     $payload = [
         'model' => AI_MODEL,
-        'input' => $mensajes,
-        'text' => [
-            'format' => ['type' => 'text'],
-            'verbosity' => 'medium',
-        ],
-        'reasoning' => [
-            'effort' => 'medium',
-            'mode' => 'standard',
-            'summary' => 'auto',
-        ],
+        'input' => $entrada,
+        'reasoning' => ['effort' => 'low'],
+        'text' => ['format' => ['type' => 'text'], 'verbosity' => 'low'],
+        'max_output_tokens' => 1500,
     ];
-    if (!empty($herramientas)) {
+    if ($herramientas) {
         $payload['tools'] = $herramientas;
         $payload['tool_choice'] = 'auto';
     }
+    $cuerpo = json_encode($payload, JSON_UNESCAPED_UNICODE);
+    $resultado = ['success' => false, 'error' => 'Sin tiempo disponible', 'http_code' => 0];
 
-    $ch = curl_init(AI_API_URL);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => json_encode($payload),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 40,
-        CURLOPT_SSL_VERIFYPEER => gmgCurlVerificarSsl(),
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . AI_API_KEY,
-        ],
-    ]);
-
-    $response = curl_exec($ch);
-    $curlError = curl_error($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($curlError || $httpCode >= 400 || empty($response)) {
-        $detalle = '';
-        if (!empty($response)) {
-            $j = json_decode($response, true);
-            if (isset($j['error']['message'])) $detalle = ' - ' . $j['error']['message'];
+    for ($intento = 1; $intento <= 2; $intento++) {
+        $restante = (int)floor($limiteHasta - microtime(true));
+        if ($restante < 3) {
+            return $resultado;
         }
-        return ['success' => false, 'error' => ($curlError ?: "HTTP $httpCode") . $detalle, 'http_code' => (int)$httpCode];
-    }
+        $ch = curl_init(AI_API_URL);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $cuerpo,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => min(20, $restante),
+            CURLOPT_SSL_VERIFYPEER => gmgCurlVerificarSsl(),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . AI_API_KEY],
+        ]);
+        $respuesta = curl_exec($ch);
+        $errorCurl = curl_error($ch);
+        $codigo = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-    $decoded = json_decode($response, true);
-    if (!is_array($decoded)) {
-        return ['success' => false, 'error' => 'Respuesta no válida de la API', 'http_code' => (int)$httpCode];
+        if ($errorCurl === '' && $codigo >= 200 && $codigo < 300) {
+            $datos = json_decode((string)$respuesta, true);
+            return is_array($datos)
+                ? ['success' => true, 'data' => $datos]
+                : ['success' => false, 'error' => 'Respuesta no válida de la API', 'http_code' => $codigo];
+        }
+        $detalle = json_decode((string)$respuesta, true)['error']['message'] ?? '';
+        $resultado = ['success' => false, 'error' => trim(($errorCurl ?: "HTTP $codigo") . ' ' . $detalle), 'http_code' => $codigo];
+
+        $reintentable = $codigo === 0 || $codigo === 429 || $codigo >= 500;
+        if (!$reintentable) {
+            return $resultado;
+        }
+        usleep(800000);
     }
-    return ['success' => true, 'data' => $decoded];
+    return $resultado;
 }
 
 /**
- * Revisa si la respuesta de la API pidió ejecutar la herramienta
- * buscar_productos. Si es así, la ejecuta contra la base de datos real,
- * devuelve el resultado a la API y repite (hasta 3 rondas) para obtener la
- * respuesta final en texto.
+ * Ejecuta las llamadas a buscar_productos que pida la IA y le devuelve los
+ * resultados, como máximo 2 rondas por mensaje (E5-H17: acota tiempo y costo).
+ * Reenvía todo el "output" de cada respuesta: la API exige de vuelta los items
+ * "reasoning" junto a cada function_call (si faltan, responde HTTP 400).
+ * La respuesta final es solo el texto de los items "message"; si viene vacía o
+ * incompleta se trata como falla y el cliente recibe la salida a WhatsApp.
  */
-function chatResolverToolCalls($resultado, $mensajes, $herramientas, $conexion, $ronda) {
-    $output = $resultado['data']['output'] ?? null;
-    $llamadasFuncion = [];
-
-    if (is_array($output)) {
-        foreach ($output as $item) {
-            if (isset($item['type']) && $item['type'] === 'function_call') {
-                $llamadasFuncion[] = $item;
-            }
-        }
-    }
-
-    if (empty($llamadasFuncion) || $ronda >= 3) {
-        $texto = chatExtraerTextoDeRespuesta($resultado['data']);
-        return ['success' => true, 'reply' => $texto, 'productos_encontrados' => [], 'debug_busquedas' => [], 'debug_modo' => 'tools'];
-    }
-
+function chatResolverToolCalls(array $resultado, array $entrada, array $herramientas, $conexion, float $limiteHasta): array {
+    $maxRondas = 2;
     $productosEncontrados = [];
     $debugBusquedas = [];
-    $mensajesActualizados = $mensajes;
 
-    // IMPORTANTE: hay que reenviar TODO el array "output" tal cual lo
-    // devolvió la API (no solo los items "function_call" sueltos). Los
-    // modelos con razonamiento incluyen un item "reasoning" junto a cada
-    // function_call, y la API lo exige de vuelta en la siguiente llamada:
-    // si se omite, responde HTTP 400 "was provided without its required
-    // 'reasoning' item".
-    foreach ($output as $item) {
-        $mensajesActualizados[] = $item;
-    }
-
-    foreach ($llamadasFuncion as $llamada) {
-        $args = [];
-        if (isset($llamada['arguments'])) {
-            $decodedArgs = json_decode($llamada['arguments'], true);
-            if (is_array($decodedArgs)) $args = $decodedArgs;
-        }
-
-        $avisoFaltanDatos = ($llamada['name'] ?? '') === 'buscar_productos' ? chatValidarBusqueda($args, $conexion) : null;
-        $resultadosBusqueda = ($llamada['name'] ?? '') === 'buscar_productos' && $conexion && $avisoFaltanDatos === null
-            ? chatEjecutarBusquedaProductos($conexion, $args)
-            : [];
-
-        $debugBusquedas[] = [
-            'nombre' => $llamada['name'] ?? '',
-            'args' => $args,
-            'num_resultados' => count($resultadosBusqueda),
-        ];
-
-        foreach ($resultadosBusqueda as $p) {
-            $productosEncontrados[$p['id']] = $p; // dedup por id
-        }
-
-        $mensajesActualizados[] = [
-            'type' => 'function_call_output',
-            'call_id' => $llamada['call_id'] ?? '',
-            'output' => $avisoFaltanDatos !== null
-                ? json_encode(['aviso' => $avisoFaltanDatos], JSON_UNESCAPED_UNICODE)
-                : json_encode($resultadosBusqueda, JSON_UNESCAPED_UNICODE),
-        ];
-    }
-
-    $siguiente = chatLlamarResponsesAPI($mensajesActualizados, $herramientas);
-    if (!$siguiente['success']) {
-        return $siguiente;
-    }
-
-    $final = chatResolverToolCalls($siguiente, $mensajesActualizados, $herramientas, $conexion, $ronda + 1);
-    $final['debug_busquedas'] = array_merge($debugBusquedas, $final['debug_busquedas'] ?? []);
-    if ($final['success'] && empty($final['productos_encontrados'])) {
-        $final['productos_encontrados'] = array_values($productosEncontrados);
-    }
-    return $final;
-}
-
-function chatExtraerTextoDeRespuesta($decoded) {
-    if (isset($decoded['choices'][0]['message']['content'])) {
-        return trim($decoded['choices'][0]['message']['content']);
-    }
-    if (isset($decoded['text']['content'])) {
-        return trim($decoded['text']['content']);
-    }
-    if (isset($decoded['choices'][0]['text'])) {
-        return trim($decoded['choices'][0]['text']);
-    }
-    if (isset($decoded['output'])) {
-        if (is_string($decoded['output'])) {
-            return trim($decoded['output']);
-        }
-        if (is_array($decoded['output'])) {
-            $extraido = '';
-            foreach ($decoded['output'] as $item) {
-                if (($item['type'] ?? '') === 'function_call') continue;
-                if (isset($item['content']) && is_array($item['content'])) {
-                    foreach ($item['content'] as $c) {
-                        if (isset($c['text'])) $extraido .= $c['text'];
-                    }
-                } elseif (isset($item['text'])) {
-                    $extraido .= $item['text'];
-                }
-            }
-            if (trim($extraido) !== '') {
-                return trim($extraido);
+    for ($ronda = 1; ; $ronda++) {
+        $output = $resultado['data']['output'] ?? [];
+        $llamadas = [];
+        foreach ($output as $item) {
+            if (($item['type'] ?? '') === 'function_call') {
+                $llamadas[] = $item;
             }
         }
+        if (!$llamadas || $ronda > $maxRondas) {
+            break;
+        }
+
+        foreach ($output as $item) {
+            $entrada[] = $item;
+        }
+        foreach ($llamadas as $llamada) {
+            $args = json_decode((string)($llamada['arguments'] ?? ''), true);
+            $args = is_array($args) ? $args : [];
+            $esBusqueda = ($llamada['name'] ?? '') === 'buscar_productos';
+            $aviso = $esBusqueda ? chatValidarBusqueda($args, $conexion) : 'Herramienta desconocida: usa solo buscar_productos.';
+            $resultados = ($esBusqueda && $aviso === null && $conexion) ? chatEjecutarBusquedaProductos($conexion, $args) : [];
+            foreach ($resultados as $p) {
+                $productosEncontrados[$p['id']] = $p; // sin repetir
+            }
+            $debugBusquedas[] = ['nombre' => $llamada['name'] ?? '', 'args' => $args, 'num_resultados' => count($resultados)];
+            $entrada[] = [
+                'type' => 'function_call_output',
+                'call_id' => $llamada['call_id'] ?? '',
+                'output' => json_encode($aviso !== null ? ['aviso' => $aviso] : $resultados, JSON_UNESCAPED_UNICODE),
+            ];
+        }
+
+        $resultado = chatLlamarResponsesAPI($entrada, $herramientas, $limiteHasta);
+        if (!$resultado['success']) {
+            return $resultado + ['debug_busquedas' => $debugBusquedas];
+        }
     }
-    return 'Disculpa, no pude generar una respuesta en este momento.';
+
+    $texto = chatTextoRespuesta($resultado['data']);
+    $estado = $resultado['data']['status'] ?? 'completed';
+    if ($texto === '' || $estado === 'incomplete') {
+        return ['success' => false, 'http_code' => 200, 'debug_busquedas' => $debugBusquedas,
+                'error' => $estado === 'incomplete' ? 'Respuesta incompleta de la IA (status incomplete)'
+                                                    : 'La IA no entregó texto (¿pidió más de ' . $maxRondas . ' rondas de herramientas?)'];
+    }
+    return ['success' => true, 'reply' => $texto, 'productos_encontrados' => array_values($productosEncontrados),
+            'debug_busquedas' => $debugBusquedas, 'debug_modo' => 'tools'];
 }
-?>
+
+/**
+ * Detalle de repuestos activos por id, para validar [ADD_TO_CART] contra lo que
+ * el bot ya mostró en la conversación (E5-H6). Cada id se convierte a entero.
+ */
+function chatProductosPorIds($conexion, array $ids): array {
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+    if (!$conexion || !$ids) {
+        return [];
+    }
+    $lista = implode(',', $ids);
+    $r = $conexion->query("SELECT id, nombre, precio, imagen_url, stock FROM " . gmgSqlProductos() . " p
+                            WHERE p.id IN ($lista) AND p.activo = 1");
+    return $r ? $r->fetch_all(MYSQLI_ASSOC) : [];
+}

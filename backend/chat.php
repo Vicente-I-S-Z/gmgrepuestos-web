@@ -16,18 +16,8 @@ if (!chatVerificarLimite()) {
     exit;
 }
 
-// 1. Obtener catálogo de productos (se usa como respaldo si la API no
-//    soporta herramientas, y como universo válido de IDs para las etiquetas)
-$productos = [];
-if (isset($conexion) && !$conexion->connect_error) {
-    $sql = "SELECT id, nombre, modelo, ano, motor, compatible_con, categoria, sku, codigo_oem, precio, stock, imagen_url FROM " . gmgSqlProductos() . " p WHERE p.activo = 1";
-    $resultado = $conexion->query($sql);
-    if ($resultado && $resultado->num_rows > 0) {
-        while ($fila = $resultado->fetch_assoc()) {
-            $productos[] = $fila;
-        }
-    }
-}
+// 1. Ya no se carga el catálogo completo en cada mensaje (F1-5): la IA consulta
+//    solo lo que necesita con la herramienta buscar_productos.
 
 // 2. Extraer mensaje, imágenes adjuntas y sesión. El historial NO se recibe del
 //    navegador (se podía inventar un turno falso del bot): se lee de la base (paso 3).
@@ -129,23 +119,23 @@ $errorIA = false;       // true si la IA no pudo responder (el chat no ofrece �
 $sufijoDebugIA = '';    // detalle técnico del error: solo se muestra a administradores o con CHAT_DEBUG
 
 if (!empty(AI_API_KEY)) {
-    $respuestaAPI = chatConsultarIA($mensaje, $imagenes, $historial, $productos, $conexion);
+    // Presupuesto de 25 s para toda la respuesta (RNF-012): 1 reintento y máximo 2 rondas de herramientas.
+    $respuestaAPI = chatConsultarIA($mensaje, $imagenes, $historial, $conexion, microtime(true) + 25);
 
     if ($respuestaAPI['success']) {
         $respuestaTexto = $respuestaAPI['reply'];
+        // Las tarjetas de producto son solo los resultados reales de buscar_productos.
+        $repuestosSugeridos = $respuestaAPI['productos_encontrados'] ?? [];
 
-        $autoAddCart = chatExtraerAddToCart($respuestaTexto, $productos);
+        // [ADD_TO_CART] solo con productos que el bot mostró en esta conversación
+        // o en esta misma respuesta (E5-H6): un id inventado no agrega nada.
+        $productosPermitidos = array_merge(
+            $repuestosSugeridos,
+            $conversacionId ? chatProductosPorIds($conexion, chatIdsMostrados($conexion, $conversacionId)) : []
+        );
+        $autoAddCart = chatExtraerAddToCart($respuestaTexto, $productosPermitidos);
         $startCheckout = chatExtraerStartCheckout($respuestaTexto);
         $notificarStockProductoId = chatExtraerNotificarStock($respuestaTexto);
-
-        // Si la IA usó la herramienta de búsqueda, esos resultados reales son
-        // las tarjetas de producto a mostrar (mucho más confiable que adivinar
-        // por texto). Si no la usó, se recurre al matching de texto anterior.
-        if (!empty($respuestaAPI['productos_encontrados'])) {
-            $repuestosSugeridos = $respuestaAPI['productos_encontrados'];
-        } else {
-            $repuestosSugeridos = chatFiltrarProductosPorTexto($respuestaTexto . ' ' . $mensaje, $productos);
-        }
 
         if (defined('CHAT_DEBUG') && CHAT_DEBUG) {
             $modo = $respuestaAPI['debug_modo'] ?? 'desconocido';

@@ -1,7 +1,7 @@
 # Fix del Asistente IA: especificación
 
 Auditoría del 13-11-2026. Cubre E5-H2, E5-H3, E5-H5, E5-H6, E5-H8, E5-H13, E5-H15, E5-H16, E5-H17 e INC-01, INC-02, INC-05, INC-06.
-Código de referencia probado: desde F1-2 la búsqueda y el historial están en `backend/chat_busqueda.php` y `gmgLimiteSuperado()` en `backend/seguridad.php` (pruebas en `tests/`); en `docs/referencia/chat_busqueda_ref.php` queda solo `chatLlamarResponsesAPI()` hasta F1-5.
+Código de referencia probado: ya integrado. Desde F1-2 la búsqueda y el historial están en `backend/chat_busqueda.php` y `gmgLimiteSuperado()` en `backend/seguridad.php`; desde F1-5 `chatLlamarResponsesAPI()` está en `backend/chat_helpers.php` (pruebas en `tests/`; `docs/referencia/` ya no existe).
 
 ## 1. Síntoma
 
