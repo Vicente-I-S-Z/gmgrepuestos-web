@@ -5,6 +5,8 @@ Estado al 15-11-2026: el código está terminado y probado en el computador (44 
 
 Marca cada casilla al terminar. Si algo no calza con lo que dice la guía, detente y avisa antes de seguir.
 
+Si antes quieres ver el sitio funcionando en tu computador, sigue `docs/GUIA_LOCALHOST_PASO_A_PASO.md`.
+
 ---
 
 ## 0. Antes de empezar

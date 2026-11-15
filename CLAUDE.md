@@ -57,6 +57,7 @@ Fecha de término del proyecto: 18-12-2026.
 - Asistente con la IA REAL (gasta la clave del `.env` local; pedir permiso a Vicente antes): `php tests/chat_ia_real_test.php --confirmo-gasto` (informe en `docs/evidencias/resultados_F1-9.md`)
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).
 - Armar el ambiente local en un computador nuevo (XAMPP, base `gmg_local` con stock de prueba): `docs/OTRO_COMPUTADOR.md`.
+- Levantar el sitio en localhost para otra persona del equipo (sin Claude Code): `docs/GUIA_LOCALHOST_PASO_A_PASO.md`
 
 ## Reglas que no se rompen
 
