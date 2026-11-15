@@ -2,13 +2,18 @@
 require_once '../backend/auth.php';
 requerirAdmin('../');
 require_once '../backend/config.php';
+require_once '../backend/admin_ui.php';
 require_once '../backend/auditoria.php';
 
 $mensaje = '';
 $tipoMensaje = '';
 
 // --- Procesar acciones (crear / eliminar / activar-desactivar) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Solo se aceptan los formularios del propio panel (código de seguridad CSRF, INC-04).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
+    $mensaje = 'No se pudo comprobar la seguridad del formulario. Recarga la página e inténtalo de nuevo.';
+    $tipoMensaje = 'error';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
     if ($accion === 'crear') {
@@ -115,6 +120,7 @@ if ($r) {
             <?php endif; ?>
 
             <form class="admin-form" method="POST" action="codigos.php" style="margin-bottom:30px;">
+                <?php echo gmgCsrfCampo(); ?>
                 <input type="hidden" name="accion" value="crear">
                 <div class="form-grid">
                     <div>
@@ -171,11 +177,13 @@ if ($r) {
                                     <td>
                                         <div class="table-actions">
                                             <form method="POST" action="codigos.php">
+                                                <?php echo gmgCsrfCampo(); ?>
                                                 <input type="hidden" name="accion" value="alternar">
                                                 <input type="hidden" name="id" value="<?php echo (int)$c['id']; ?>">
                                                 <button type="submit" class="link-editar"><?php echo (int)$c['activo'] === 1 ? 'Desactivar' : 'Activar'; ?></button>
                                             </form>
                                             <form method="POST" action="codigos.php" onsubmit="return confirm('¿Eliminar este código de descuento?');">
+                                                <?php echo gmgCsrfCampo(); ?>
                                                 <input type="hidden" name="accion" value="eliminar">
                                                 <input type="hidden" name="id" value="<?php echo (int)$c['id']; ?>">
                                                 <button type="submit" class="link-eliminar">Eliminar</button>

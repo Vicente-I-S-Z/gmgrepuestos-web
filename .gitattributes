@@ -1,0 +1,17 @@
+# Finales de línea: el proyecto usa LF (como el hosting Linux). Sin esto, Git para Windows
+# (autocrlf = true) convierte los archivos a CRLF al cambiar de rama o clonar, y los
+# scripts .sh de tests/ dejan de funcionar en Git Bash.
+* text=auto eol=lf
+
+# Binarios: nunca convertir
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.zip binary

@@ -2,6 +2,7 @@
 require_once '../backend/auth.php';
 requerirAdmin('../');
 require_once '../backend/config.php';
+require_once '../backend/admin_ui.php';
 require_once '../backend/modelos.php';
 require_once '../backend/datos.php';
 require_once '../backend/auditoria.php';
@@ -20,7 +21,11 @@ $categorias = gmgCategorias($conexion);
 $vehiculosPorModelo = gmgVehiculosPorModelo($conexion);
 
 // --- Procesar acciones (crear / actualizar / eliminar) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Solo se aceptan los formularios del propio panel (código de seguridad CSRF, INC-04).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
+    $mensaje = 'No se pudo comprobar la seguridad del formulario. Recarga la página e inténtalo de nuevo.';
+    $tipoMensaje = 'error';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
     if ($accion === 'eliminar') {
@@ -198,6 +203,7 @@ $idCategoriaActual = (int)($productoEditar['id_categoria'] ?? 0);
 
             <?php if ($mostrarFormulario): ?>
                 <form class="admin-form" method="POST" action="productos.php">
+                    <?php echo gmgCsrfCampo(); ?>
                     <input type="hidden" name="accion" value="guardar">
                     <input type="hidden" name="id" value="<?php echo $productoEditar ? (int)$productoEditar['id'] : 0; ?>">
                     <input type="hidden" name="modelo_actual" value="<?php echo htmlspecialchars($modeloSeleccionado); ?>">
@@ -347,6 +353,7 @@ $idCategoriaActual = (int)($productoEditar['id_categoria'] ?? 0);
                                                 <div class="table-actions">
                                                     <a href="productos.php?editar=<?php echo (int)$p['id']; ?>&modelo=<?php echo urlencode($modeloSeleccionado); ?>" class="link-editar">Editar</a>
                                                     <form method="POST" action="productos.php" onsubmit="return confirm('¿Eliminar este producto? Se quitará de todos los modelos. Esta acción no se puede deshacer.');">
+                                                        <?php echo gmgCsrfCampo(); ?>
                                                         <input type="hidden" name="accion" value="eliminar">
                                                         <input type="hidden" name="id" value="<?php echo (int)$p['id']; ?>">
                                                         <input type="hidden" name="modelo_actual" value="<?php echo htmlspecialchars($modeloSeleccionado); ?>">

@@ -22,7 +22,11 @@ if (!$chk || $chk->num_rows === 0) {
 }
 
 // --- Marcar un aviso de stock como notificado ---
-if ($tablaLista && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'marcar_notificado') {
+// Solo se aceptan los formularios del propio panel (código de seguridad CSRF, INC-04).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
+    $mensajeFlash = 'No se pudo comprobar la seguridad del formulario. Recarga la página e inténtalo de nuevo.';
+    $tipoMensajeFlash = 'error';
+} elseif ($tablaLista && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'marcar_notificado') {
     $id = (int)($_POST['id'] ?? 0);
     if ($id > 0) {
         $stmt = $conexion->prepare("UPDATE avisos_stock SET notificado = 1 WHERE id_aviso = ?");
@@ -123,6 +127,7 @@ gmgAdminCabecera('Avisos de stock', 'avisos');
                                     <td>
                                         <?php if (!$a['notificado']): ?>
                                         <form method="POST" action="avisos.php" style="display:inline;">
+                                            <?php echo gmgCsrfCampo(); ?>
                                             <input type="hidden" name="accion" value="marcar_notificado">
                                             <input type="hidden" name="id" value="<?php echo (int)$a['id']; ?>">
                                             <button type="submit" class="btn-admin btn-secundario">Marcar notificado</button>

@@ -2,6 +2,7 @@
 require_once '../backend/auth.php';
 requerirAdmin('../');
 require_once '../backend/config.php';
+require_once '../backend/admin_ui.php';
 require_once '../backend/datos.php';
 require_once '../backend/email_helpers.php';
 require_once '../backend/auditoria.php';
@@ -10,7 +11,11 @@ $mensaje = '';
 $tipoMensaje = '';
 
 // --- Actualizar estado manualmente ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'actualizar_estado') {
+// Solo se aceptan los formularios del propio panel (código de seguridad CSRF, INC-04).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
+    $mensaje = 'No se pudo comprobar la seguridad del formulario. Recarga la página e inténtalo de nuevo.';
+    $tipoMensaje = 'error';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'actualizar_estado') {
     $id = (int)($_POST['id'] ?? 0);
     $nuevoEstado = $_POST['estado'] ?? '';
     $estadosValidos = ['pendiente', 'aprobado', 'rechazado', 'error'];
@@ -261,6 +266,7 @@ function badgePago($pagoEstado) {
                                     <td>
                                         <?php echo badgeEstado($p['estado']); ?>
                                         <form method="POST" action="pedidos.php" class="estado-select-form" style="margin-top:6px;">
+                                            <?php echo gmgCsrfCampo(); ?>
                                             <input type="hidden" name="accion" value="actualizar_estado">
                                             <input type="hidden" name="id" value="<?php echo (int)$p['id']; ?>">
                                             <select name="estado" onchange="this.form.submit()">

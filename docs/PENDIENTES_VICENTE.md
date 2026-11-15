@@ -134,3 +134,12 @@ En producción, horario, dirección ("Av. Providencia 1234"), teléfono ("+56 9 
 - [ ] 1. Pídele a GMG su horario, dirección, teléfono y correo de contacto reales.
 - [ ] 2. https://gmgrepuestos.cl/admin > menú "Asistente" > reemplaza esos 4 campos > Guardar. Si todavía no tienes un dato, deja el campo vacío: así el chat dice que no lo tiene y ofrece WhatsApp, en vez de dar uno falso.
 - [ ] 3. Revisa https://gmgrepuestos.cl/contacto.php: debe mostrar los datos nuevos.
+
+## 11. Estructura completa de la base de producción (para cerrar F0-3)
+
+En producción existe la columna `pedidos.metodo_entrega` (la agregó un script 06 que nunca se guardó en `BD_v2/`) y una base nueva no la tiene. Con la estructura completa Claude Code arma el script que falta y revisa si hay más diferencias. No bloquea: Claude Code sigue con F0-5.
+
+- [ ] 1. phpMyAdmin de producción > selecciona la base del sitio > pestaña "Exportar".
+- [ ] 2. Método: "Personalizado". Formato: SQL.
+- [ ] 3. En "Tablas", deja todas marcadas, pero solo en la columna "Estructura" (desmarca la columna "Datos"). Así el archivo no trae pedidos, clientes ni contraseñas.
+- [ ] 4. Botón "Exportar" (abajo). Adjunta el archivo `.sql` en el chat de Claude Code.
