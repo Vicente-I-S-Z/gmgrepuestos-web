@@ -1837,3 +1837,59 @@ body { padding-bottom: 0; }
     .seguimiento-container { margin: 20px auto; padding: 20px 16px; }
     .seguimiento-form-row { grid-template-columns: 1fr; }
 }
+
+/* ---------- Ficha de producto (F2-4) ---------- */
+.producto-nombre a { color: inherit; text-decoration: none; }
+.producto-nombre a:hover { color: var(--color-acento); text-decoration: underline; }
+.ficha { padding-top: 16px; padding-bottom: 48px; }
+.ficha-migas ol { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 0.85rem; color: #555; }
+.ficha-migas li + li::before { content: '›'; margin-right: 4px; color: #999; }
+.ficha-migas a { color: var(--color-principal); display: inline-flex; align-items: center; min-height: 44px; text-transform: none; letter-spacing: normal; font-weight: 600; }
+.ficha-migas [aria-current] { overflow-wrap: anywhere; }
+.ficha-producto { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 8px; background: var(--color-fondo); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden; }
+.ficha-galeria.producto-img-wrap { height: auto; aspect-ratio: 4 / 3; background: #fff; }
+.ficha-galeria .producto-img { object-fit: contain; transition: opacity 0.2s ease; }
+.ficha-galeria .producto-img-nav { opacity: 1; }
+.ficha-info { padding: 0 18px 22px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ficha-categoria { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-acento); }
+.ficha-nombre { font-size: 1.45rem; line-height: 1.25; overflow-wrap: anywhere; }
+.ficha-precio { font-size: 1.8rem; font-weight: 900; color: var(--color-acento); }
+.ficha-info .gmg-disponibilidad { align-self: flex-start; font-size: 0.8rem; margin: 0; }
+.ficha-acciones { margin-top: 4px; }
+.ficha-acciones .btn-add-cart, .ficha-acciones .btn-comprar-ahora { font-size: 0.8rem; }
+.ficha-ayuda { display: flex; flex-direction: column; gap: 8px; }
+.ficha-btn-asistente, .ficha-btn-whatsapp { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border-radius: var(--radius-sm); font-weight: 700; font-size: 0.9rem; text-align: center; text-decoration: none; cursor: pointer; transition: transform 0.15s ease; }
+.ficha-btn-asistente { background: var(--color-principal); color: #fff; border: none; }
+.ficha-btn-whatsapp { background: #fff; color: #0B6B32; border: 2px solid var(--color-whatsapp); }
+.ficha-btn-asistente:active, .ficha-btn-whatsapp:active { transform: scale(0.97); }
+.ficha-datos { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin-top: 6px; padding-top: 12px; border-top: 1px solid #eee; font-size: 0.9rem; }
+.ficha-datos dt { font-weight: 700; }
+.ficha-datos dd { color: #444; overflow-wrap: anywhere; }
+.ficha-seccion { margin-top: 20px; padding: 20px 18px; background: var(--color-fondo); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.ficha-seccion h2 { font-size: 1.15rem; margin-bottom: 10px; }
+.ficha-seccion p { color: #333; line-height: 1.55; }
+.ficha-compat { padding-left: 18px; color: #333; columns: 1; }
+.ficha-compat li { margin: 3px 0; break-inside: avoid; }
+.ficha-nota { margin-top: 10px; font-size: 0.85rem; color: #555 !important; }
+.ficha-relacionados { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ficha-relacionado { display: flex; flex-direction: column; gap: 4px; padding: 10px; border: 1px solid #eee; border-radius: var(--radius-sm); color: var(--color-principal); text-decoration: none; transition: transform 0.2s ease; }
+.ficha-relacionado img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: var(--color-secundario); border-radius: 4px; }
+.ficha-relacionado-nombre { font-size: 0.85rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.ficha-relacionado-precio { font-weight: 800; color: var(--color-acento); }
+.ficha-relacionado .gmg-disponibilidad { align-self: flex-start; }
+.ficha-no-encontrada h1 { font-size: 1.4rem; margin-bottom: 10px; }
+.ficha-no-encontrada .btn-back { margin-right: 8px; }
+@media (hover: hover) {
+    .ficha-relacionado:hover { transform: translateY(-2px); border-color: var(--color-acento); }
+}
+@media (min-width: 768px) {
+    .ficha-producto { grid-template-columns: 1fr 1fr; gap: 28px; }
+    .ficha-info { padding: 24px 24px 24px 0; }
+    .ficha-nombre { font-size: 1.75rem; }
+    .ficha-ayuda { flex-direction: row; flex-wrap: wrap; }
+    .ficha-compat { columns: 2; }
+    .ficha-relacionados { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ficha-galeria .producto-img, .ficha-relacionado, .ficha-btn-asistente, .ficha-btn-whatsapp { transition: none; }
+}

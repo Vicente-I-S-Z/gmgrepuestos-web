@@ -69,7 +69,7 @@ done
 
 echo "== Lógica interna del backend (403) =="
 for n in bot_config config auth chat_helpers chat_busqueda email_config email_helpers SmtpMailer modelos datos \
-         entorno seguridad conocimiento pagina_publica auditoria pagos admin_ui; do
+         entorno seguridad conocimiento pagina_publica auditoria pagos admin_ui pedido_estado; do
     esperar 403 "backend/$n.php"
 done
 

@@ -109,7 +109,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (chatToggleBtn) chatToggleBtn.addEventListener('click', toggleChat);
     if (chatCloseBtn) chatCloseBtn.addEventListener('click', toggleChat);
-    botonesAbrirChat.forEach(boton => boton.addEventListener('click', abrirChat));
+    botonesAbrirChat.forEach(boton => boton.addEventListener('click', () => {
+        abrirChat();
+        // Ficha de producto (F2-4): deja escrita la consulta con el nombre y el SKU para que el
+        // asistente sepa de qué repuesto se habla; el cliente la completa y la envía.
+        const pregunta = boton.dataset.chatPregunta;
+        if (pregunta && chatInput && !chatInput.value.trim()) {
+            chatInput.value = pregunta;
+            chatInput.focus();
+            chatInput.setSelectionRange(pregunta.length, pregunta.length);
+        }
+    }));
 
     // El botón flotante también se puede usar con el teclado (Enter o Espacio).
     if (chatToggleBtn) {

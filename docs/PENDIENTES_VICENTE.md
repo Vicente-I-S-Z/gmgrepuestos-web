@@ -249,3 +249,21 @@ Archivos listos en `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_fase1\` (9, 
 - [ ] 6. Escríbele a Claude Code "subida fase 1": revisa desde afuera que `/backend/chat_busqueda.php` responda 403 y que el sitio siga en pie.
 
 **Si algo falla:** vuelve a subir a `backend` los 6 archivos juntos; si sigue fallando, avísale a Claude Code (el respaldo de `public_html` de la Fase 0 sirve para volver atrás).
+
+## 18. Carpeta del proyecto en este computador (15-11)
+
+Claude Code armó el ambiente local el 15-11 (parte D de `docs/OTRO_COMPUTADOR.md`): `php.ini` respaldado en `C:\xampp\php\php.ini.antes-gmg`, `extension=gd` activa, `date.timezone=America/Santiago`; base `gmg_local` creada con `BD_v2/01` a `07` y stock de prueba (538 activos, 485 con stock).
+
+**Ordenado el 15-11:** el proyecto quedó en un solo nivel, `C:\Users\santi\Desktop\Gmgrepuestos\` (repositorio, `CLAUDE.md`, `.claude\` y `.env` de pruebas juntos). Se borró la copia vieja que estaba en esa carpeta (sus archivos eran iguales o más antiguos, su `.git\` no tenía commits y su `.env` tenía los mismos bytes) y `tests/apache/httpd-gmg.conf` apunta a la ruta nueva. Abre VS Code y Claude Code en `C:\Users\santi\Desktop\Gmgrepuestos` y haz los commits desde ahí. Falta lo tuyo:
+
+- [ ] 1. PATH (a Claude Code se le bloqueó el cambio): Inicio > "Editar las variables de entorno de tu cuenta" > `Path` > Editar > Nuevo: `C:\xampp\php` y otra con `C:\xampp\mysql\bin` > Aceptar. Cierra y vuelve a abrir VS Code. Sin esto, `php` y `mysql` no funcionan en la terminal (Claude Code usa las rutas completas mientras tanto).
+- [ ] 2. **Borrar la copia desactualizada `D:\Gmgrepuestos\`** (a Claude Code se le bloqueó por estar fuera del proyecto). Es idéntica al proyecto sin los cambios de F2-4 y su `.git\` tiene los mismos commits, así que no se pierde nada. Antes, abre sus dos `.env` (`D:\Gmgrepuestos\.env` y `D:\Gmgrepuestos\Gmgrepuestos\.env`): si alguno tiene claves de **producción** que no tengas guardadas en otro lado, cópialo a `Documentos\gmg-produccion.env`. Luego borra la carpeta `D:\Gmgrepuestos` completa.
+- [x] 3. El código busca el `.env` primero **una carpeta arriba** del proyecto (como en Hostinger). Revisado por Claude Code el 15-11: no hay un `.env` suelto en `C:\Users\santi\Desktop\`, así que el sitio local usa el del proyecto.
+
+## 19. Ejecutar `BD_v2/07_stock_descontado.sql` en producción (F2-3, antes de subir la Fase 2)
+
+Agrega la columna `pedidos.stock_descontado_en`. Sin ella, el panel nuevo no puede cambiar el estado de los pedidos (muestra "No se pudo actualizar el estado." y no cambia nada). Súbelo **junto con** la Fase 2, no antes ni mucho después.
+
+- [ ] 1. hPanel > Bases de datos > phpMyAdmin > la base del sitio > pestaña SQL.
+- [ ] 2. Pega el contenido completo de `BD_v2/07_stock_descontado.sql` y presiona Continuar. Debe terminar sin errores. Se puede repetir sin problema.
+- [ ] 3. Revisa: `SHOW COLUMNS FROM pedidos LIKE 'stock_descontado_en';` muestra una fila.

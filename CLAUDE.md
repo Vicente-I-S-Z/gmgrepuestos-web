@@ -41,9 +41,12 @@ Fecha de término del proyecto: 18-12-2026.
 - Tarjetas del chat en un navegador real (Edge o Chrome sin ventana, con captura a 360 px): `php tests/chat_tarjetas_test.php`
 - Disponibilidad en las tarjetas de la tienda: `php tests/tienda_disponibilidad_test.php`
 - Stock en el checkout (CP-15, bloqueo `FOR UPDATE`, sin llegar a Mercado Pago): `php tests/checkout_stock_test.php`; tope de stock en el carrito (Edge sin ventana): `php tests/carrito_stock_test.php`
+- Descuento de stock al aprobar un pedido en el panel (F2-3, idempotente y con `FOR UPDATE`): `php tests/pedido_aprobar_test.php`
+- Ficha de producto (F2-4: contenido, SEO, 404, escape y, en Edge, chat y carrito a 360 y 1366 px; deja la base como estaba): `php tests/producto_ficha_test.php`
 - Ver una página a 360 px reales con Edge sin ventana (no baja de unos 500 px): abrir `/tests/vista_ancho.html?ancho=360&url=/index.php%3Fq%3Dfiltro` y sacar la captura
 - Asistente con la IA REAL (gasta la clave del `.env` local; pedir permiso a Vicente antes): `php tests/chat_ia_real_test.php --confirmo-gasto` (informe en `docs/evidencias/resultados_F1-9.md`)
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).
+- Armar el ambiente local en un computador nuevo (XAMPP, base `gmg_local` con stock de prueba): `docs/OTRO_COMPUTADOR.md`.
 
 ## Reglas que no se rompen
 

@@ -69,6 +69,9 @@ function gmgDatosModelosPublicos($conexion) {
  *   canonical    Dirección canónica absoluta (opcional, historia E8-H8).
  *   robots       Valor de la etiqueta robots, ej. "noindex, follow" (opcional).
  *   css          Hojas de estilo adicionales (arreglo de rutas).
+ *   og_tipo      Tipo para redes sociales (por defecto "website"; la ficha usa "product").
+ *   og_imagen    Dirección absoluta de la imagen para redes sociales (opcional).
+ *   json_ld      Datos estructurados para buscadores (arreglo; se imprime como JSON-LD).
  */
 function gmgCabeceraPublica(array $o = []) {
     $titulo = $o['titulo_completo'] ?? (($o['titulo'] ?? 'Inicio') . ' - GMG Repuestos');
@@ -88,11 +91,20 @@ function gmgCabeceraPublica(array $o = []) {
 <?php if (!empty($o['robots'])): ?>
     <meta name="robots" content="<?php echo gmgH($o['robots']); ?>">
 <?php endif; ?>
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="<?php echo gmgH($o['og_tipo'] ?? 'website'); ?>">
     <meta property="og:locale" content="es_CL">
     <meta property="og:site_name" content="GMG Repuestos">
     <meta property="og:title" content="<?php echo gmgH($titulo); ?>">
     <meta property="og:description" content="<?php echo gmgH($descripcion); ?>">
+<?php if (!empty($o['canonical'])): ?>
+    <meta property="og:url" content="<?php echo gmgH($o['canonical']); ?>">
+<?php endif; ?>
+<?php if (!empty($o['og_imagen'])): ?>
+    <meta property="og:image" content="<?php echo gmgH($o['og_imagen']); ?>">
+<?php endif; ?>
+<?php if (!empty($o['json_ld'])): ?>
+    <script type="application/ld+json"><?php echo json_encode($o['json_ld'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP); ?></script>
+<?php endif; ?>
 <?php foreach ($css as $hoja): ?>
     <link rel="stylesheet" href="<?php echo gmgH($hoja); ?>?v=<?php echo gmgVersionArchivo($hoja); ?>">
 <?php endforeach; ?>

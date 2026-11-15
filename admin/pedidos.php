@@ -6,6 +6,7 @@ require_once '../backend/admin_ui.php';
 require_once '../backend/datos.php';
 require_once '../backend/email_helpers.php';
 require_once '../backend/auditoria.php';
+require_once '../backend/pedido_estado.php';
 
 $mensaje = '';
 $tipoMensaje = '';
@@ -21,36 +22,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
     $estadosValidos = ['pendiente', 'aprobado', 'rechazado', 'error'];
 
     if (in_array($nuevoEstado, $estadosValidos, true) && $id > 0) {
-        // Estado anterior, para el registro de auditoría.
-        $estadoAnterior = null;
-        $stmtAnt = $conexion->prepare("SELECT estado FROM pedidos WHERE id_pedido = ?");
-        $stmtAnt->bind_param("i", $id);
-        $stmtAnt->execute();
-        $resAnt = $stmtAnt->get_result();
-        if ($resAnt && ($filaAnt = $resAnt->fetch_assoc())) {
-            $estadoAnterior = $filaAnt['estado'];
-        }
-        $stmtAnt->close();
-
-        $stmt = $conexion->prepare("UPDATE pedidos SET estado = ? WHERE id_pedido = ?");
-        $stmt->bind_param("si", $nuevoEstado, $id);
-        if ($stmt->execute()) {
-            if ($estadoAnterior !== null && $estadoAnterior !== $nuevoEstado) {
-                gmgAuditar($conexion, 'estado_pedido', 'pedido', $id,
-                    'Pedido #' . $id . ': estado ' . $estadoAnterior . ' a ' . $nuevoEstado,
-                    $estadoAnterior, $nuevoEstado);
-            }
-            $mensaje = 'Estado del pedido #' . $id . ' actualizado.';
-            $tipoMensaje = 'exito';
+        // Cambia el estado, descuenta el stock al aprobar (una sola vez) y lo audita (F2-3).
+        $resultado = gmgPedidoCambiarEstado($conexion, $id, $nuevoEstado);
+        $mensaje = $resultado['mensaje'];
+        $tipoMensaje = $resultado['ok'] ? 'exito' : 'error';
+        if ($resultado['cambio']) {
             // Aviso al cliente: el administrador cambió el estado de su
             // pedido manualmente. Si el correo falla, no debe interrumpir
             // el panel, por eso se ignora silenciosamente cualquier error.
             enviarCorreoActualizacionPedido($conexion, $id, $nuevoEstado);
-        } else {
-            $mensaje = 'No se pudo actualizar el estado.';
-            $tipoMensaje = 'error';
         }
-        $stmt->close();
     }
 }
 
