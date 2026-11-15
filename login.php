@@ -8,13 +8,24 @@ if (adminLogueado()) {
     exit;
 }
 
-$error = '';
+$error = isset($_GET['expirada']) ? 'Tu sesión se cerró por 30 minutos sin actividad. Vuelve a ingresar.' : '';
+
+// Bloqueo por fuerza bruta (F3-1, INC-08, CP-38): 5 intentos fallidos por usuario o por IP
+// bloquean 15 minutos. El mensaje es el mismo exista o no el usuario.
+const GMG_LOGIN_MAX_FALLOS = 5;
+const GMG_LOGIN_BLOQUEO = 15 * 60;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $usuario = trim($_POST['usuario'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $usuario = isset($_POST['usuario']) && is_string($_POST['usuario']) ? mb_substr(trim($_POST['usuario']), 0, 60) : '';
+    $password = isset($_POST['password']) && is_string($_POST['password']) ? $_POST['password'] : '';
+    $claveUsuario = 'usuario:' . mb_strtolower($usuario);
+    $bloqueado = gmgLimiteAlcanzado($conexion, 'login_ip', GMG_LOGIN_MAX_FALLOS, GMG_LOGIN_BLOQUEO)
+              || ($usuario !== '' && gmgLimiteAlcanzado($conexion, 'login_usuario', GMG_LOGIN_MAX_FALLOS, GMG_LOGIN_BLOQUEO, $claveUsuario));
 
-    if ($usuario === '' || $password === '') {
+    if ($bloqueado) {
+        error_log('[GMG Login] Intento bloqueado por demasiados fallos');
+        $error = 'Demasiados intentos fallidos. Espera 15 minutos e inténtalo de nuevo.';
+    } elseif ($usuario === '' || $password === '') {
         $error = 'Ingresa tu usuario y contraseña.';
     } else {
         // Base de datos v2: la tabla administradores usa id_admin (y tiene el campo
@@ -33,12 +44,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 session_regenerate_id(true);
                 $_SESSION['admin_id'] = (int)$idAdmin;
                 $_SESSION['admin_nombre'] = $admin['nombre'];
+                $_SESSION['admin_ultimo'] = time();
+                gmgLimiteReiniciar($conexion, 'login_ip');
+                gmgLimiteReiniciar($conexion, 'login_usuario', $claveUsuario);
                 header('Location: admin/index.php');
                 exit;
             }
         }
         $error = 'Usuario o contraseña incorrectos.';
         $stmt->close();
+        // Cuenta el fallo para la IP y para el usuario (aunque no exista: no se revela cuáles existen).
+        gmgLimiteSuperado($conexion, 'login_ip', GMG_LOGIN_MAX_FALLOS, GMG_LOGIN_BLOQUEO);
+        gmgLimiteSuperado($conexion, 'login_usuario', GMG_LOGIN_MAX_FALLOS, GMG_LOGIN_BLOQUEO, $claveUsuario);
     }
 }
 ?>

@@ -6,12 +6,14 @@ require_once '../backend/admin_ui.php';
 require_once '../backend/modelos.php';
 require_once '../backend/datos.php';
 require_once '../backend/auditoria.php';
+require_once '../backend/fotos.php';
+require_once '../backend/email_helpers.php';
 
 // Base de datos v2:
 // - El modelo, año y motor ya no se escriben a mano: se marcan los
 //   vehículos compatibles (tabla compatibilidades).
 // - La categoría se elige de la tabla categorias.
-// - Las fotos se guardan en repuesto_imagenes (hasta 3).
+// - Las fotos (hasta 3) se suben como archivo (F2-8) y se guardan en repuesto_imagenes.
 
 $mensaje = '';
 $tipoMensaje = '';
@@ -20,18 +22,77 @@ gmgCargarModelos($conexion);
 $categorias = gmgCategorias($conexion);
 $vehiculosPorModelo = gmgVehiculosPorModelo($conexion);
 
-// --- Procesar acciones (crear / actualizar / eliminar) ---
+/** Fotos guardadas de un repuesto: [1 => url, 2 => url, 3 => url] (las que existan). */
+function gmgFotosDeRepuesto($conexion, $idRepuesto) {
+    $fotos = [];
+    $stmt = $conexion->prepare("SELECT orden, url FROM repuesto_imagenes WHERE id_repuesto = ? ORDER BY orden");
+    $stmt->bind_param("i", $idRepuesto);
+    $stmt->execute();
+    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $f) {
+        $fotos[(int)$f['orden']] = $f['url'];
+    }
+    $stmt->close();
+    return $fotos;
+}
+
+/** Frase para el aviso del panel cuando se enviaron correos de reposición (F3-9). */
+function gmgTextoAvisosEnviados($enviados) {
+    return $enviados > 0 ? ' Se avisó por correo a ' . $enviados . ($enviados === 1 ? ' cliente' : ' clientes') . ' que esperaba' . ($enviados === 1 ? '' : 'n') . ' este repuesto.' : '';
+}
+
+/** Texto de un campo del formulario ('' si no viene o llega como arreglo). */
+function gmgCampoTexto($nombre) {
+    return isset($_POST[$nombre]) && is_string($_POST[$nombre]) ? trim($_POST[$nombre]) : '';
+}
+
+// --- Procesar acciones (crear / actualizar / edición rápida / eliminar) ---
 // Solo se aceptan los formularios del propio panel (código de seguridad CSRF, INC-04).
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    // El envío superó el máximo del servidor (post_max_size) y llegó vacío: suele ser por fotos muy pesadas.
+    $mensaje = 'Las fotos pesan demasiado y no se guardó nada. Usa imágenes de hasta 2 MB cada una.';
+    $tipoMensaje = 'error';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
     $mensaje = 'No se pudo comprobar la seguridad del formulario. Recarga la página e inténtalo de nuevo.';
     $tipoMensaje = 'error';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
 
-    if ($accion === 'eliminar') {
+    if ($accion === 'rapido') {
+        // Edición rápida de precio y stock desde el listado (F2-8, E6-H3, RF-052), con auditoría.
+        $id = (int)($_POST['id'] ?? 0);
+        $precioTexto = gmgCampoTexto('precio');
+        $stockTexto = gmgCampoTexto('stock');
+        $antes = $id > 0 ? gmgAuditoriaLeerRepuesto($conexion, $id) : null;
+        if (!$antes) {
+            $mensaje = 'Ese producto ya no existe. Recarga la página.';
+            $tipoMensaje = 'error';
+        } elseif (!ctype_digit($precioTexto) || !ctype_digit($stockTexto) || strlen($precioTexto) > 9 || strlen($stockTexto) > 6) {
+            $mensaje = 'El precio y el stock de ' . $antes['sku'] . ' deben ser números enteros, sin puntos ni signos (0 o más).';
+            $tipoMensaje = 'error';
+        } else {
+            $precio = (float)$precioTexto;
+            $stock = (int)$stockTexto;
+            $stmt = $conexion->prepare("UPDATE repuestos SET precio = ?, stock = ? WHERE id_repuesto = ?");
+            $stmt->bind_param("dii", $precio, $stock, $id);
+            if ($stmt->execute()) {
+                gmgAuditarRepuesto($conexion, $id, $antes, gmgAuditoriaLeerRepuesto($conexion, $id));
+                $sinCambios = (float)$antes['precio'] === $precio && (int)$antes['stock'] === $stock;
+                $mensaje = $sinCambios ? 'No hubo cambios en ' . $antes['sku'] . '.'
+                                       : 'Guardado: ' . $antes['sku'] . ' queda en $' . number_format($precio, 0, ',', '.') . ' con ' . $stock . ' unidades.';
+                $mensaje .= gmgTextoAvisosEnviados(gmgNotificarReposicion($conexion, $id)); // F3-9
+                $tipoMensaje = 'exito';
+            } else {
+                error_log('[GMG Productos] Edición rápida falló: ' . $stmt->error);
+                $mensaje = 'No se pudo guardar el precio y el stock. Inténtalo de nuevo.';
+                $tipoMensaje = 'error';
+            }
+            $stmt->close();
+        }
+    } elseif ($accion === 'eliminar') {
         $id = (int)($_POST['id'] ?? 0);
         // Se anota cómo estaba el repuesto antes de borrarlo (registro de auditoría).
         $repuestoAntesDeBorrar = gmgAuditoriaLeerRepuesto($conexion, $id);
+        $fotosAntesDeBorrar = gmgFotosDeRepuesto($conexion, $id);
         // Las fotos, compatibilidades y avisos se borran en cascada; los
         // pedidos antiguos conservan el nombre, SKU y precio del repuesto.
         $stmt = $conexion->prepare("DELETE FROM repuestos WHERE id_repuesto = ?");
@@ -42,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
                     'Repuesto ' . $repuestoAntesDeBorrar['sku'] . ' eliminado (precio ' . gmgAuditoriaPesos($repuestoAntesDeBorrar['precio']) . ', stock ' . (int)$repuestoAntesDeBorrar['stock'] . ')',
                     $repuestoAntesDeBorrar['sku'], null);
             }
+            gmgBorrarFotosRepuesto($fotosAntesDeBorrar); // solo las subidas desde el panel
             $mensaje = 'Producto eliminado correctamente.';
             $tipoMensaje = 'exito';
         } else {
@@ -63,17 +125,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
         $precio = max(0, (float)($_POST['precio'] ?? 0));
         $stock = max(0, (int)($_POST['stock'] ?? 0));
         $activo = isset($_POST['activo']) ? 1 : 0;
-        $imagenes = [
-            $_POST['imagen_url'] ?? '',
-            $_POST['imagen_url_2'] ?? '',
-            $_POST['imagen_url_3'] ?? '',
-        ];
         $vehiculos = isset($_POST['vehiculos']) && is_array($_POST['vehiculos']) ? $_POST['vehiculos'] : [];
+
+        // ¿El SKU ya lo usa otro producto? (CP-41: mensaje claro y nada guardado)
+        $skuRepetido = false;
+        if ($sku !== '') {
+            $stmt = $conexion->prepare("SELECT 1 FROM repuestos WHERE sku = ? AND id_repuesto <> ?");
+            $stmt->bind_param("si", $sku, $id);
+            $stmt->execute();
+            $skuRepetido = $stmt->get_result()->num_rows > 0;
+            $stmt->close();
+        }
+
+        // Fotos (F2-8): las guardadas se leen de la base (no del formulario); cada casilla
+        // se reemplaza con un archivo nuevo, se quita o queda igual.
+        $fotosAntes = $id > 0 ? gmgFotosDeRepuesto($conexion, $id) : [];
+        $fotosSubidas = [];
+        $errorFotos = '';
 
         if ($nombre === '' || $sku === '' || $idCategoria <= 0) {
             $mensaje = 'Nombre, categoría y SKU son obligatorios.';
             $tipoMensaje = 'error';
+        } elseif ($skuRepetido) {
+            $mensaje = 'El SKU ' . $sku . ' ya lo usa otro producto. Elige otro.';
+            $tipoMensaje = 'error';
         } else {
+            for ($n = 1; $n <= 3 && $errorFotos === ''; $n++) {
+                [$ruta, $error] = gmgGuardarFoto($_FILES["foto_$n"] ?? ['error' => UPLOAD_ERR_NO_FILE], 'repuestos', 'rep', true);
+                if ($error) {
+                    $errorFotos = "Foto $n: $error";
+                } elseif ($ruta) {
+                    $fotosSubidas[$n] = $ruta;
+                }
+            }
+        }
+        if ($errorFotos !== '') {
+            gmgBorrarFotosRepuesto($fotosSubidas); // no quedan archivos sueltos
+            $mensaje = $errorFotos . ' No se guardó ningún cambio.';
+            $tipoMensaje = 'error';
+        } elseif ($tipoMensaje !== 'error') {
+            $imagenes = [];
+            for ($n = 1; $n <= 3; $n++) {
+                $imagenes[] = $fotosSubidas[$n] ?? (isset($_POST["quitar_foto_$n"]) ? '' : ($fotosAntes[$n] ?? ''));
+            }
             // Cómo estaba el repuesto antes de guardar (registro de auditoría de precio y stock).
             $repuestoAntes = $id > 0 ? gmgAuditoriaLeerRepuesto($conexion, $id) : null;
             $conexion->begin_transaction();
@@ -98,15 +192,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
 
             if ($ok) {
                 $conexion->commit();
+                // Fotos reemplazadas o quitadas: se borran los archivos subidos desde el panel.
+                gmgBorrarFotosRepuesto(array_diff($fotosAntes, $imagenes));
                 // Quién cambió el precio o el stock, y cuándo (historia E10-H7).
                 gmgAuditarRepuesto($conexion, $id, $repuestoAntes, gmgAuditoriaLeerRepuesto($conexion, $id));
                 $mensaje = ((int)($_POST['id'] ?? 0) > 0) ? 'Producto actualizado correctamente.' : 'Producto creado correctamente.';
                 if (count($vehiculos) === 0) {
                     $mensaje .= ' Ojo: no marcaste vehículos compatibles, así que no aparecerá al filtrar por modelo.';
                 }
+                $mensaje .= gmgTextoAvisosEnviados(gmgNotificarReposicion($conexion, $id)); // F3-9
                 $tipoMensaje = 'exito';
             } else {
                 $conexion->rollback();
+                gmgBorrarFotosRepuesto($fotosSubidas); // la base volvió atrás: los archivos nuevos sobran
                 $mensaje = 'No se pudo guardar el producto (revisa que el SKU no esté repetido).';
                 $tipoMensaje = 'error';
             }
@@ -202,7 +300,7 @@ $idCategoriaActual = (int)($productoEditar['id_categoria'] ?? 0);
             <?php endif; ?>
 
             <?php if ($mostrarFormulario): ?>
-                <form class="admin-form" method="POST" action="productos.php">
+                <form class="admin-form" method="POST" action="productos.php" enctype="multipart/form-data">
                     <?php echo gmgCsrfCampo(); ?>
                     <input type="hidden" name="accion" value="guardar">
                     <input type="hidden" name="id" value="<?php echo $productoEditar ? (int)$productoEditar['id'] : 0; ?>">
@@ -272,16 +370,28 @@ $idCategoriaActual = (int)($productoEditar['id_categoria'] ?? 0);
                         </div>
 
                         <div class="form-full">
-                            <label for="imagen_url">URL de la imagen (foto principal)</label>
-                            <input type="text" id="imagen_url" name="imagen_url" placeholder="img/placeholder-repuesto.svg" value="<?php echo htmlspecialchars($productoEditar['imagen_url'] ?? ''); ?>">
-                        </div>
-                        <div>
-                            <label for="imagen_url_2">URL foto adicional 2 (opcional)</label>
-                            <input type="text" id="imagen_url_2" name="imagen_url_2" placeholder="Para activar el carrusel del producto" value="<?php echo htmlspecialchars($productoEditar['imagen_url_2'] ?? ''); ?>">
-                        </div>
-                        <div>
-                            <label for="imagen_url_3">URL foto adicional 3 (opcional)</label>
-                            <input type="text" id="imagen_url_3" name="imagen_url_3" placeholder="Opcional" value="<?php echo htmlspecialchars($productoEditar['imagen_url_3'] ?? ''); ?>">
+                            <label>Fotos (hasta 3)</label>
+                            <small class="form-ayuda">JPG, PNG o WebP de hasta 2 MB cada una. La primera es la principal; con 2 o más se activa el carrusel en la tienda.</small>
+                            <div class="fotos-repuesto">
+                                <?php $fotosEditar = $productoEditar ? gmgFotosDeRepuesto($conexion, (int)$productoEditar['id']) : []; ?>
+                                <?php for ($n = 1; $n <= 3; $n++): ?>
+                                    <?php $fotoActual = $fotosEditar[$n] ?? ''; ?>
+                                    <div class="foto-casilla">
+                                        <span class="foto-casilla-titulo"><?php echo $n === 1 ? 'Foto principal' : "Foto $n"; ?></span>
+                                        <?php if ($fotoActual !== ''): ?>
+                                            <?php $srcActual = preg_match('#^(https?:)?//|^/#', $fotoActual) ? $fotoActual : '../' . gmgMiniaturaRepuesto($fotoActual); ?>
+                                            <img class="foto-casilla-img" src="<?php echo htmlspecialchars($srcActual); ?>" alt="Foto <?php echo $n; ?> actual">
+                                            <label class="check-inline">
+                                                <input type="checkbox" name="quitar_foto_<?php echo $n; ?>" value="1"> Quitar esta foto
+                                            </label>
+                                        <?php else: ?>
+                                            <span class="foto-casilla-vacia">Sin foto</span>
+                                        <?php endif; ?>
+                                        <label for="foto_<?php echo $n; ?>"><?php echo $fotoActual !== '' ? 'Reemplazar por' : 'Subir'; ?></label>
+                                        <input type="file" id="foto_<?php echo $n; ?>" name="foto_<?php echo $n; ?>" accept="image/jpeg,image/png,image/webp">
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn-admin">Guardar producto</button>
@@ -332,8 +442,9 @@ $idCategoriaActual = (int)($productoEditar['id_categoria'] ?? 0);
                                     <tbody>
                                         <?php foreach ($listaSeleccionada as $p): ?>
                                         <tr>
-                                            <?php $srcFoto = preg_match('#^(https?:)?//|^/#', $p['imagen_url']) ? $p['imagen_url'] : '../' . $p['imagen_url']; ?>
-                                            <td><img class="thumb" src="<?php echo htmlspecialchars($srcFoto); ?>" alt="" onerror="this.onerror=null;this.src='../img/placeholder-repuesto.svg';"></td>
+                                            <?php $srcFoto = preg_match('#^(https?:)?//|^/#', $p['imagen_url']) ? $p['imagen_url'] : '../' . gmgMiniaturaRepuesto($p['imagen_url']); ?>
+                                            <?php $formRapido = 'rapido-' . (int)$p['id']; ?>
+                                            <td><img class="thumb" src="<?php echo htmlspecialchars($srcFoto); ?>" alt="" loading="lazy" onerror="this.onerror=null;this.src='../img/placeholder-repuesto.svg';"></td>
                                             <td>
                                                 <?php echo htmlspecialchars($p['nombre']); ?>
                                                 <?php if ((int)$p['activo'] !== 1): ?>
@@ -342,15 +453,26 @@ $idCategoriaActual = (int)($productoEditar['id_categoria'] ?? 0);
                                             </td>
                                             <td><?php echo htmlspecialchars($p['categoria']); ?></td>
                                             <td><?php echo htmlspecialchars($p['sku']); ?></td>
-                                            <td>$<?php echo number_format((float)$p['precio'], 0, ',', '.'); ?></td>
                                             <td>
-                                                <?php echo (int)$p['stock']; ?>
+                                                <span class="input-pesos">$<input type="number" class="input-rapido" name="precio" form="<?php echo $formRapido; ?>" min="0" max="999999999" step="1" required
+                                                       value="<?php echo (int)$p['precio']; ?>" aria-label="Precio de <?php echo htmlspecialchars($p['sku']); ?>"></span>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="input-rapido input-stock" name="stock" form="<?php echo $formRapido; ?>" min="0" max="999999" step="1" required
+                                                       value="<?php echo (int)$p['stock']; ?>" aria-label="Stock de <?php echo htmlspecialchars($p['sku']); ?>">
                                                 <?php if ((int)$p['stock'] < (int)$p['stock_minimo']): ?>
                                                     <span class="badge badge-stock-bajo">Bajo</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
                                                 <div class="table-actions">
+                                                    <form method="POST" action="productos.php" id="<?php echo $formRapido; ?>">
+                                                        <?php echo gmgCsrfCampo(); ?>
+                                                        <input type="hidden" name="accion" value="rapido">
+                                                        <input type="hidden" name="id" value="<?php echo (int)$p['id']; ?>">
+                                                        <input type="hidden" name="modelo_actual" value="<?php echo htmlspecialchars($modeloSeleccionado); ?>">
+                                                        <button type="submit" class="btn-rapido">Guardar</button>
+                                                    </form>
                                                     <a href="productos.php?editar=<?php echo (int)$p['id']; ?>&modelo=<?php echo urlencode($modeloSeleccionado); ?>" class="link-editar">Editar</a>
                                                     <form method="POST" action="productos.php" onsubmit="return confirm('¿Eliminar este producto? Se quitará de todos los modelos. Esta acción no se puede deshacer.');">
                                                         <?php echo gmgCsrfCampo(); ?>

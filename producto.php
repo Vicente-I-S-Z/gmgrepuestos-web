@@ -190,6 +190,7 @@ $enlaceWhatsApp = gmgEnlaceWhatsApp('Hola, quiero confirmar si el repuesto ' . $
                         <button type="button" class="btn-comprar-ahora" <?php echo $datosCarrito; ?>>⚡ Comprar ahora</button>
                     <?php endif; ?>
                 </div>
+                <?php if ($agotado) { gmgFormularioAvisoStock($id, false); } // aviso de reposición (F3-11) ?>
                 <div class="ficha-ayuda">
                     <button type="button" class="ficha-btn-asistente" data-abrir-chat data-chat-pregunta="<?php echo gmgH($preguntaChat); ?>">🤖 Preguntar al asistente</button>
                     <a class="ficha-btn-whatsapp" href="<?php echo gmgH($enlaceWhatsApp); ?>" target="_blank" rel="noopener">Confirmar compatibilidad por WhatsApp</a>
@@ -257,4 +258,4 @@ $enlaceWhatsApp = gmgEnlaceWhatsApp('Hola, quiero confirmar si el repuesto ' . $
     </main>
 
 <?php
-gmgPiePublico($conexion, ['scripts' => ['js/tienda.js']]);
+gmgPiePublico($conexion, ['scripts' => ['js/tienda.js'], 'whatsapp' => 'Hola, consulto por el repuesto ' . $nombre . ' (SKU ' . $sku . ')']);

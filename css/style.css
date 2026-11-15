@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* La fuente Inter se carga con <link rel="preconnect"> en backend/pagina_publica.php (F4-7). */
 
 :root {
     --color-principal: #111111; /* Negro */
@@ -1908,4 +1908,56 @@ body { padding-bottom: 0; }
 @media (max-width: 480px) {
     .paginacion-flecha { flex: 1 1 40%; }
     .paginacion ol { order: -1; flex-basis: 100%; }
+}
+
+/* ---------- WhatsApp (F3-6) ---------- */
+.gmg-wa-flotante { position: fixed; left: 24px; bottom: 24px; z-index: 9990; width: 56px; height: 56px; border-radius: 50%; background: var(--color-whatsapp); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md); transition: transform 0.2s ease; }
+.gmg-wa-flotante svg { width: 30px; height: 30px; fill: #fff; }
+.gmg-wa-flotante:active { transform: scale(0.94); }
+@media (hover: hover) { .gmg-wa-flotante:hover { transform: scale(1.06); } }
+.btn-whatsapp-carrito { display: flex; align-items: center; justify-content: center; margin-top: 10px; background: var(--color-whatsapp); color: #0B3D1E; text-decoration: none; }
+.btn-whatsapp-carrito:hover { background: #1EBE5B; }
+.btn-whatsapp-carrito[hidden] { display: none; }
+@media (max-width: 767px) { .gmg-wa-flotante { left: 16px; bottom: 16px; width: 52px; height: 52px; } }
+@media (prefers-reduced-motion: reduce) { .gmg-wa-flotante { transition: none; } }
+
+/* ---------- Aviso de reposición (F3-11) ---------- */
+.aviso-stock-plegado { margin-top: 10px; font-size: 0.85rem; }
+.aviso-stock-plegado summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--color-acento); font-weight: 700; }
+.aviso-stock { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.aviso-stock label { font-size: 0.85rem; color: #444; }
+.aviso-stock-fila { display: flex; gap: 6px; }
+.aviso-stock-fila input { flex: 1; min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius-sm); font-size: 0.95rem; }
+.aviso-stock-fila button { min-height: 44px; padding: 0 14px; border: none; border-radius: var(--radius-sm); background: var(--color-principal); color: #fff; font-weight: 700; cursor: pointer; }
+.aviso-stock-fila button:disabled { opacity: 0.6; cursor: default; }
+.aviso-stock-msg { min-height: 1em; font-size: 0.82rem; color: #444; }
+.aviso-stock-msg.is-ok { color: #1B5E20; }
+.aviso-stock-msg.is-error { color: #B71C1C; }
+.ficha-info .aviso-stock { padding: 12px; background: var(--color-secundario); border-radius: var(--radius-sm); }
+
+/* ---------- Sin resultados (F3-10) ---------- */
+.sin-resultados-sub { font-weight: 700; margin-top: 6px; }
+.sin-resultados-alternativas { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 6px 0 14px; }
+.sin-resultados-alternativas a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1px solid #ddd; border-radius: 999px; background: #fff; color: var(--color-principal); font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+.sin-resultados-alternativas a:hover { border-color: var(--color-acento); color: var(--color-acento); }
+.sin-resultados-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.btn-sin-resultados-wa { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: var(--radius-sm); background: var(--color-whatsapp); color: #0B3D1E; font-weight: 700; text-decoration: none; }
+
+/* Texto solo para lectores de pantalla (F4-8, accesibilidad) */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.cliente-modal-privacidad { margin: -4px 0 12px; font-size: 0.8rem; color: #555; }
+.cliente-modal-privacidad a { color: #B71C1C; font-weight: 600; }
+
+/* ---------- Filtros y orden del listado (F4-4) ---------- */
+.listado-filtros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin-top: 14px; padding: 12px 14px; background: var(--color-fondo); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.listado-filtro { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; font-weight: 700; color: #444; }
+.listado-filtro select, .listado-filtro input[type="number"] { min-height: 44px; padding: 6px 10px; border: 1px solid #ccc; border-radius: var(--radius-sm); font-size: 0.9rem; background: #fff; }
+.listado-filtro input[type="number"] { width: 120px; }
+.listado-filtro-check { flex-direction: row; align-items: center; gap: 8px; min-height: 44px; }
+.listado-filtro-check input { width: 22px; height: 22px; accent-color: var(--color-acento); }
+.listado-filtros-aplicar { min-height: 44px; padding: 0 18px; border: none; border-radius: var(--radius-sm); background: var(--color-principal); color: #fff; font-weight: 700; cursor: pointer; }
+.listado-filtros-limpiar { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-acento); font-weight: 700; font-size: 0.9rem; }
+@media (max-width: 480px) {
+    .listado-filtro { flex: 1 1 40%; }
+    .listado-filtro input[type="number"] { width: 100%; }
 }

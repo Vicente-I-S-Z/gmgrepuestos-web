@@ -139,8 +139,13 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 - [x] **F2-7 Teléfono chileno** (E3-H3, RF-021). Validar `+56 9` en cliente y servidor.
   Hecho (15-11): nueva `gmgTelefonoChile()` en `backend/datos.php`: acepta un celular (9 dígitos que empiezan con 9, con o sin `56`/`+56`, espacios, guiones, puntos o paréntesis) y lo deja como `+56 9 1234 5678`; rechaza fijos, largos incorrectos y texto. `checkout.php` lo valida y normaliza junto al resto de los datos del cliente, antes de crear el pedido (la creación de la preferencia de Mercado Pago no se tocó; recibe el teléfono ya normalizado). `js/cart.js` usa la misma regla con el mensaje "Ingresa un celular chileno, por ejemplo +56 9 1234 5678.". No necesita números reales: las pruebas usan números inventados (aclarado con Vicente, que pidió hacerla ahora).
   Probado: `php tests/telefono_test.php` TODO OK (17 casos iguales en el servidor y en `cart.js`, ejecutado con Node; checkout rechaza "hola", "12345678" y un fijo sin crear pedido ni cliente, y guarda "9 8765 4321" como "+56 9 8765 4321"); regresión `checkout_stock`, `carrito_stock` y `pedido_aprobar` en TODO OK.
-- [ ] **F2-8 Panel de productos** (E6-H2, E6-H3, RF-051, RF-052). Subir hasta 3 imágenes JPG, PNG o WebP de 2 MB con nombre aleatorio y miniatura (reutilizar `gmgCatalogoGuardarFoto` de `admin/catalogo.php`); editar stock y precio desde el listado, con CSRF y auditoría.
+- [x] **F2-8 Panel de productos** (E6-H2, E6-H3, RF-051, RF-052). Subir hasta 3 imágenes JPG, PNG o WebP de 2 MB con nombre aleatorio y miniatura (reutilizar `gmgCatalogoGuardarFoto` de `admin/catalogo.php`); editar stock y precio desde el listado, con CSRF y auditoría.
   Listo cuando: CP-40, CP-41 y CP-46 exitosos.
+  Hecho (15-11): `gmgCatalogoGuardarFoto` pasó a `backend/fotos.php` como `gmgGuardarFoto()` (bloqueado en `backend/.htaccess`), que ahora usan el catálogo y los productos; revisa el contenido real (no la extensión), 2 MB, nombre aleatorio `rep-<16 hex>` y miniatura de 320 px en `img/repuestos/min/` (GD; sin GD copia la foto). En `admin/productos.php`: las 3 URL a mano se cambiaron por 3 casillas con la foto actual, "Quitar" y "Subir/Reemplazar" (las fotos guardadas se leen de la base, no del formulario); si una foto falla o la base vuelve atrás, se borran los archivos recién subidos; al reemplazar, quitar o eliminar se borran solo los archivos subidos desde el panel (nunca las 35 fotos de muestra compartidas). SKU repetido se avisa antes de guardar ("El SKU X ya lo usa otro producto"). Envío que supera `post_max_size` muestra "Las fotos pesan demasiado" en vez del error de CSRF. Listado: miniatura y precio y stock editables en cada fila (formulario por fila con atributo `form`, CSRF, solo enteros de 0 o más, "No hubo cambios" sin auditar, auditoría con `gmgAuditarRepuesto`). Estilos en `css/admin.css`. Las URL escritas a mano ya no se pueden poner desde el formulario (las que existen se conservan).
+  Probado: `php tests/panel_productos_test.php` TODO OK (36, con login y CSRF reales: CP-40 crear con JPG y PNG, miniatura de 320 px, foto visible, auditoría, en la tienda y con ficha; editar reemplazando por WebP y quitando la 2 con borrado de archivos, auditoría de precio y stock con valor anterior, nuevo y administrador; foto de muestra compartida no se borra; edición rápida con 5 valores inválidos, sin cambios, sin CSRF y producto inexistente; CP-41 sin nombre, SKU repetido sin fotos sueltas, foto 2 inválida borra la 1 ya subida; CP-46 PDF, `.php` renombrado y 2 MB + 1 byte rechazados, VL-18 2 MB exactos aceptado, foto de modelo nuevo en el catálogo y `.php` rechazado ahí; desactivar lo saca de la tienda y su ficha da 404; eliminar borra sus fotos; log vacío; al final no queda ningún archivo nuevo en `img/`); capturas del listado a 1366 y 768 px (a 768 la tabla se desplaza dentro de su caja, como el resto del panel) y del formulario; regresión `cp42_csrf_panel` (56 formularios con CSRF en productos) y `cp47_htaccess` (ahora con `backend/fotos.php` en 403) en TODO OK.
+  **Producción:** la carpeta `img/repuestos/` debe tener permiso de escritura (755) para PHP; la subcarpeta `min/` la crea el sitio.
+
+**Estado al 15-11-2026 (tarde):** código de la Fase 2 terminado (F2-1 a F2-8 hechas y probadas en local). Puerta de salida: probados con prueba automática CP-03 a CP-06 (F2-5), CP-15 (F2-2), CP-40, CP-41 y CP-46 (F2-8). CP-01, CP-02 y CP-07 a CP-11 son funciones que ya existían y no se tocaron: quedan para la corrida completa de F5-1; CP-12 a CP-14 son de Mercado Pago. Pendiente antes de subir la Fase 2: stock real en producción (F0-7, punto 13) y `BD_v2/07` (punto 19). Pruebas automáticas: 20 en `tests/` (19 sin costo y la de IA real con `--confirmo-gasto`). Siguiente: Fase 3 en el orden de las instrucciones (F3-1, F3-3, F3-4, F3-6, F3-11, F3-9, F3-10, F3-8, F3-7, F3-5, F3-2, F3-12).
 
 **Puerta de salida:** CP-01 a CP-15 (sin los de Mercado Pago) exitosos.
 
@@ -148,19 +153,39 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 
 ## Fase 3: panel, seguridad y chat (30-11 a 04-12)
 
-- [ ] **F3-1 Login seguro** (E1-H1, E1-H2, INC-08, RNF-002, RNF-003). `session_set_cookie_params` (HttpOnly, Secure, SameSite=Lax) en `backend/auth.php`; bloqueo de 15 min tras 5 intentos fallidos por usuario o IP; expiración por 30 min de inactividad; `logout.php` borra la cookie.
+- [x] **F3-1 Login seguro** (E1-H1, E1-H2, INC-08, RNF-002, RNF-003). `session_set_cookie_params` (HttpOnly, Secure, SameSite=Lax) en `backend/auth.php`; bloqueo de 15 min tras 5 intentos fallidos por usuario o IP; expiración por 30 min de inactividad; `logout.php` borra la cookie.
+  Hecho (15-11): `gmgIniciarSesion()` en `backend/seguridad.php` (HttpOnly, Secure con HTTPS, SameSite=Lax, modo estricto) en los 4 lugares que abrían sesión; `backend/auth.php` cierra el panel tras 30 min sin actividad (`login.php?expirada=1`); `login.php` bloquea 15 min tras 5 fallos por IP o por usuario (contadores en `limites_solicitudes`, mismo mensaje exista o no el usuario, se borran al entrar bien); `logout.php` borra la cookie (`gmgCerrarSesion`).
+  Probado: `php tests/login_seguro_test.php` TODO OK (18, CP-37 y CP-38).
   Listo cuando: CP-37 y CP-38 exitosos.
 - [ ] **F3-2 Restablecer contraseña** (E1-H5, RF-005). Token de un uso (guardar solo su hash), 30 min de vigencia, correo con enlace.
-- [ ] **F3-3 Límites por IP** (E10-H3, RNF-035). `gmgLimiteSuperado` en `validar_codigo.php`, `registrar_aviso_stock.php`, `buscar_sugerencias.php` y `checkout.php`. Turnstile opcional (RNF-041, prioridad baja).
-- [ ] **F3-4 SQL preparado** (E10-H2, RNF-030). `index.php`, `admin/pedidos.php`, `backend/relacionados.php`, `backend/datos.php` (`gmgCondicionModelo`).
-- [ ] **F3-5 Cabeceras** (RNF-031, RNF-038). CSP básica en `backend/seguridad.php` (revisar que Google Fonts, wa.me y Mercado Pago sigan funcionando).
+- [x] **F3-3 Límites por IP** (E10-H3, RNF-035). `gmgLimiteSuperado` en `validar_codigo.php`, `registrar_aviso_stock.php`, `buscar_sugerencias.php` y `checkout.php`. Turnstile opcional (RNF-041, prioridad baja).
+  Hecho (15-11): sugerencias 60/min, código de descuento 10/min, aviso de stock 5 cada 10 min y checkout 10 cada 10 min (IP como hash). De paso, checkout, aviso de stock y código ya no caen con campos enviados como arreglo (hallazgo de F2-7). Turnstile no se hizo (prioridad baja).
+  Probado: `php tests/limites_ip_test.php` TODO OK (17).
+- [x] **F3-4 SQL preparado** (E10-H2, RNF-030). `index.php`, `admin/pedidos.php`, `backend/relacionados.php`, `backend/datos.php` (`gmgCondicionModelo`).
+  Hecho (15-11): `gmgCondicionModelo` devuelve condición y parámetros; `admin/pedidos.php` (estado, pago, búsqueda por nombre, RUT, teléfono, correo y número) y `backend/relacionados.php` con sentencias preparadas. Ya no queda ningún `real_escape_string` en el sitio.
+  Probado: `php tests/sql_preparado_test.php` TODO OK (11, con inyección en cada filtro).
+- [x] **F3-5 Cabeceras** (RNF-031, RNF-038). CSP básica en `backend/seguridad.php` (revisar que Google Fonts, wa.me y Mercado Pago sigan funcionando).
+  Hecho (15-11): `Content-Security-Policy` (solo el sitio, Google Fonts, mapa de Google e imágenes HTTPS; `'unsafe-inline'` por los `onerror`/`onsubmit` y el script del dashboard) y `Permissions-Policy` (micrófono solo propio, sin cámara ni ubicación) en `gmgAplicarSeguridadConexion()`. Mejora pendiente: sacar los manejadores en línea para quitar `'unsafe-inline'`.
+  Probado: `php tests/csp_test.php` TODO OK (12: cabeceras en 5 rutas, 0 bloqueos en Edge en inicio, modelo, ficha, contacto y sin resultados, y un script externo de control sí se bloquea).
   Visto en F2-2: `js/cart.js` (`renderCartItems` y `renderGuardados`) arma el HTML con `innerHTML` sin escapar `item.nombre` ni `item.imagen` (vienen del `localStorage`) y usa `onerror` en línea; las fotos de `index.php` también traen `onerror` en línea. Escapar con `escapeHTML()` y pasar esos `onerror` a un listener antes de poner una CSP sin `'unsafe-inline'`.
-- [ ] **F3-6 WhatsApp** (E5-H7, E7-H4, E3-H11, RF-042, RF-065, RF-029). Enlace con resumen (modelo, año, repuesto) desde el chat; botón visible en la tienda con mensaje según la página; "Finalizar por WhatsApp" en el carrito con productos y total.
-- [ ] **F3-7 Privacidad del chat** (E5-H18, RNF-017). Aviso al abrir el chat; borrar conversaciones de más de 12 meses (consulta que se pueda programar con cron de Hostinger).
-- [ ] **F3-8 Configurar el chatbot** (E6-H9, RF-058). Bienvenida y número de WhatsApp editables desde el panel "Asistente".
-- [ ] **F3-9 Correo de reposición** (E7-H3, RF-064). Al guardar stock mayor a 0 en un producto con avisos pendientes, enviar correo a los contactos que son correo y marcarlos notificados.
-- [ ] **F3-10 Búsquedas sin resultado** (E2-H10, RF-017). Registrar el término en una tabla nueva; mostrar alternativas, chat y WhatsApp.
-- [ ] **F3-11 Aviso de reposición en la tienda** (E2-H9, RF-016). Formulario en la tarjeta y la ficha cuando hay stock 0.
+- [x] **F3-6 WhatsApp** (E5-H7, E7-H4, E3-H11, RF-042, RF-065, RF-029). Enlace con resumen (modelo, año, repuesto) desde el chat; botón visible en la tienda con mensaje según la página; "Finalizar por WhatsApp" en el carrito con productos y total.
+  Hecho (15-11): botón flotante de WhatsApp en toda la tienda (mensaje según la página: modelo o repuesto); botón "WhatsApp" en el encabezado del chat que arma un resumen con lo consultado y los repuestos mostrados; "Finalizar por WhatsApp" en el carrito con productos, cantidades, total y código (oculto con el carrito vacío).
+  Probado: `php tests/whatsapp_test.php` TODO OK (8, en Edge).
+- [x] **F3-7 Privacidad del chat** (E5-H18, RNF-017). Aviso al abrir el chat; borrar conversaciones de más de 12 meses (consulta que se pueda programar con cron de Hostinger).
+  Hecho (15-11): aviso en el chat ("Guardamos esta conversación hasta 12 meses..." con enlace a la política) y frase en la política de privacidad; `chatBorrarConversacionesAntiguas()` y `backend/limpiar_chat.php` (solo línea de comandos, bloqueado en `backend/.htaccess`) para el cron diario de Hostinger (punto nuevo en los pendientes).
+  Probado: `php tests/privacidad_chat_test.php` TODO OK (9: borra la vieja y la vacía, deja la con actividad reciente, cascada, 404 desde el navegador).
+- [x] **F3-8 Configurar el chatbot** (E6-H9, RF-058). Bienvenida y número de WhatsApp editables desde el panel "Asistente".
+  Hecho (15-11): temas "Mensaje de bienvenida del chat" y "WhatsApp de la tienda" en el panel "Asistente" (no se envían a la IA). `gmgNumeroWhatsApp()` usa el del panel y, si está vacío, el del `.env` en todos los enlaces (tienda, chat, carrito, IA y correos). El celular se valida y se guarda como +56 9.
+  Probado: `php tests/config_chatbot_test.php` TODO OK (12).
+- [x] **F3-9 Correo de reposición** (E7-H3, RF-064). Al guardar stock mayor a 0 en un producto con avisos pendientes, enviar correo a los contactos que son correo y marcarlos notificados.
+  Hecho (15-11): `gmgNotificarReposicion()` en `backend/email_helpers.php` (de paso se quitó un `?>` final que habría impreso texto). Al guardar o editar rápido un producto con stock > 0, escribe a los avisos pendientes que son correo y los marca notificados; los celulares quedan para WhatsApp; si el correo falla, queda pendiente. El panel dice "Se avisó por correo a N clientes".
+  Probado: `php tests/reposicion_test.php` TODO OK (10, con enviador falso y con el SMTP apagado).
+- [x] **F3-10 Búsquedas sin resultado** (E2-H10, RF-017). Registrar el término en una tabla nueva; mostrar alternativas, chat y WhatsApp.
+  Hecho (15-11): script nuevo `BD_v2/08_busquedas_sin_resultado.sql` (**ejecutar en producción**); `gmgRegistrarBusquedaSinResultado()` (sin IP, máx. 30 por IP cada 10 min); la página sin resultados ofrece buscar en todo el catálogo, todo el modelo y categorías, el asistente con la búsqueda escrita y WhatsApp; "Avisos de stock" del panel lista las 20 más buscadas (90 días).
+  Probado: `php tests/busquedas_vacias_test.php` TODO OK (9).
+- [x] **F3-11 Aviso de reposición en la tienda** (E2-H9, RF-016). Formulario en la tarjeta y la ficha cuando hay stock 0.
+  Hecho (15-11): formulario "Avísame cuando llegue" (`gmgFormularioAvisoStock`) en las tarjetas sin stock (plegado) y en la ficha; `js/tienda.js` lo envía al endpoint del chat. El servidor ahora exige correo o celular chileno (normalizado).
+  Probado: `php tests/aviso_stock_test.php` TODO OK (9, en Edge).
 - [ ] **F3-12 (Baja) Estado del pedido en el chat** (E5-H12, RF-047). Herramienta `consultar_pedido` con número más correo o RUT; mismo mensaje si no coincide.
 
 **Puerta de salida:** CP-22, CP-23, CP-31, CP-34, CP-37, CP-38 y CP-42 exitosos.
@@ -169,22 +194,34 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 
 ## Fase 4: SEO, panel avanzado, rendimiento y accesibilidad (05 a 10-12)
 
-- [ ] **F4-1 sitemap y robots** (E8-H2, RF-067). `sitemap.php` (servido como `sitemap.xml` por `.htaccess`) y `robots.txt` que excluya `/admin`, `/backend` y el checkout.
+- [x] **F4-1 sitemap y robots** (E8-H2, RF-067). `sitemap.php` (servido como `sitemap.xml` por `.htaccess`) y `robots.txt` que excluya `/admin`, `/backend` y el checkout.
+  Hecho (15-11): `sitemap.php` (portada, 14 modelos, cada repuesto activo y páginas informativas; sin panel, checkout ni búsquedas), regla `/sitemap.xml` en `.htaccess` y `robots.txt` (excluye `/admin/`, `/backend/`, checkout, login, retorno de pago, mi pedido y búsquedas).
+  Probado: `php tests/seo_test.php` TODO OK (7, 538 fichas = 538 activos); CP-47 con Apache real: `/sitemap.xml`, `/robots.txt` y la ficha en 200.
 - [ ] **F4-2 URLs legibles** (E8-H3, RF-068). `/repuestos/{modelo}/{slug}` reescrito a `producto.php`, con 301 desde `producto.php?id=`.
 - [ ] **F4-3 Google Analytics 4** (E8-H6, RF-071). Eventos `view_item`, `add_to_cart`, `begin_checkout` y del chat (apertura, búsqueda, WhatsApp). Necesita el ID de medición de GMG.
-- [ ] **F4-4 Filtros y orden** (E2-H8, RF-015). Precio, disponibilidad y orden por precio o nombre.
+- [x] **F4-4 Filtros y orden** (E2-H8, RF-015). Precio, disponibilidad y orden por precio o nombre.
+  Hecho (15-11): en el listado, orden (relevancia, precio menor o mayor, nombre), "Solo con stock" y precio desde/hasta (solo enteros); la paginación y "Quitar filtros" los conservan; con filtros la página es `noindex`.
+  Probado: `php tests/filtros_test.php` TODO OK (9, recorre todas las páginas y compara con la base).
 - [ ] **F4-5 Importar CSV** (E6-H8, RF-057). Con el formato de `BD_v2/catalogo_repuestos.csv`; informe de filas con error; todo en una transacción.
 - [ ] **F4-6 Correos de pedido** (E3-H8, E7-H1, RF-026, RF-062). Correo al cliente y aviso interno cuando el pedido pasa a aprobado (no al crearse pendiente). Enviar el aviso de pedido nuevo después de responder al navegador.
-- [ ] **F4-7 Rendimiento** (E10-H8, RNF-020, RNF-043). Fuente con `<link rel="preconnect">` y 3 grosores; fotos de modelos en WebP; `loading="lazy"`; compresión y caché en `.htaccess`; listado del catálogo sin 6 subconsultas por fila.
+- [x] **F4-7 Rendimiento** (E10-H8, RNF-020, RNF-043). Fuente con `<link rel="preconnect">` y 3 grosores; fotos de modelos en WebP; `loading="lazy"`; compresión y caché en `.htaccess`; listado del catálogo sin 6 subconsultas por fila.
+  Hecho (15-11): la fuente pasa de `@import` con 6 grosores a `<link>` con `preconnect` y 3 grosores (el panel la pide en `admin.css`); fotos de modelos en WebP (1,3 MB a 466 KB) y `gmgModeloImagen()` usa la WebP si existe; `.htaccess` con compresión (`mod_deflate`) y caché (CSS y JS 1 año, se versionan con `?v=`; imágenes 1 mes). `loading="lazy"` ya estaba. No se rehízo el listado sin subconsultas: con 24 por página responde en 53 ms en local (si Hostinger es lento, retomar).
+  Probado: CP-47 con Apache real (gzip en CSS y HTML, caché de 1 año y 1 mes); las 14 fotos de modelos se sirven en WebP; `csp_test` sin bloqueos con la fuente nueva.
   Listo cuando: Lighthouse móvil con LCP de 2,5 s o menos en portada y catálogo.
-- [ ] **F4-8 Accesibilidad** (E9-H5, RNF-026). Botón del chat como `<button>`; foco visible; contraste 4,5:1; etiquetas en formularios; animación de escritura del chat respeta `prefers-reduced-motion`.
+- [x] **F4-8 Accesibilidad** (E9-H5, RNF-026). Botón del chat como `<button>`; foco visible; contraste 4,5:1; etiquetas en formularios; animación de escritura del chat respeta `prefers-reduced-motion`.
+  Hecho (15-11): el botón del chat es `<button>` con `aria-expanded` (se quitó su manejo de teclado propio); etiquetas para lectores de pantalla (`.sr-only`) en el buscador, modelo y categoría; `aria-label` en el campo de fotos del chat; puntos del carrusel en español. Foco visible y movimiento reducido ya existían.
+  Probado: `php tests/accesibilidad_test.php` TODO OK (8, en Edge con movimiento reducido: todos los campos con nombre accesible, fotos con alt, contraste mínimo 4,98:1 en 10 textos clave).
   Ya hecho en F1-7: la animación de escritura respeta `prefers-reduced-motion` (probado en `tests/chat_tarjetas_test.php`).
-- [ ] **F4-9 Datos personales** (E10-H6, RNF-037). Canal concreto para pedir acceso, rectificación o eliminación (correo o formulario) en la política y en el checkout.
+- [x] **F4-9 Datos personales** (E10-H6, RNF-037). Canal concreto para pedir acceso, rectificación o eliminación (correo o formulario) en la política y en el checkout.
+  Hecho (15-11): sección "Tus derechos" (`#tus-derechos`) de la política con canal concreto (WhatsApp con mensaje armado y correo con asunto); en el formulario de pago, una línea sobre el uso de los datos con enlace a WhatsApp y a la política. No se agregó un plazo legal de respuesta (lo define GMG).
+  Probado: revisión por HTTP de la política y del formulario (enlaces presentes, log vacío).
 - [ ] **F4-10 (Baja, solo si sobra tiempo)** E1-H6 cuentas, E1-H7 roles, E6-H11 banners, E6-H12 reportes CSV. E5-H14 Telegram: proponer descartarla.
 
 **Puerta de salida:** CP-49 y CP-50 exitosos; Lighthouse dentro de meta.
 
 ---
+
+**Estado al 15-11-2026 (noche):** Fase 3 hecha salvo F3-2 (restablecer contraseña) y F3-12 (Baja); Fase 4 hecha en F4-1, F4-4, F4-7, F4-8 y F4-9 (quedan F4-2 URLs legibles, F4-3 Analytics, que necesita el ID de GMG, F4-5 importar CSV, F4-6 correos de pedido aprobado, que toca el checkout junto a Mercado Pago, y F4-10). Toda la batería sin costo en TODO OK. Paquete de subida `dist/subida_final/` y guía en el punto 20 de los pendientes. Esquema de la presentación en `docs/evidencias/presentacion_final.md`. Siguiente: subida de Vicente (punto 20) y revisión de CP-47 en producción; después F3-2, F4-6 y F4-2.
 
 ## Fase 5: pruebas, operación y entrega (11 a 18-12)
 
@@ -193,8 +230,10 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 - [ ] **F5-3 OWASP ZAP** (escaneo base) sin hallazgos de riesgo alto.
 - [ ] **F5-4 Operación** (E7-H5, E10-H9, E10-H10, E10-H1, E9-H2). SPF, DKIM y DMARC; respaldo diario y prueba de restauración documentada; monitor de disponibilidad; capturas de HTTPS y de los 5 navegadores.
 - [ ] **F5-5 Producción limpia.** Borrar datos DEMO; usuario de BD con permisos mínimos; `APP_ENV=produccion`; `CHAT_DEBUG` en `false`.
+  Avance (15-11): desde el código está listo (`CHAT_DEBUG` fijo en `false`, los scripts no traen datos DEMO). Falta lo de Vicente: `APP_ENV=produccion` en el `.env`, usuario de base con permisos mínimos (punto 20.C de los pendientes).
   Además (decisión del 14-11 en F0-2): rotar la contraseña de la base, el token de Mercado Pago, la contraseña SMTP y las contraseñas de `rodolfo`, `vicente` y `martin`, que están publicadas en el repo de evidencias (zip y volcado de Fase 2). Pasos en `docs/PENDIENTES_VICENTE.md`, punto 7 (B, D, E y F).
 - [ ] **F5-6 Despliegue.** Subir solo lo público (excluir `.claude/`, `CLAUDE.md`, `docs/`, `BD_v2/`, `arquitectura/`, `tests/`, `.git/`). Probar la vuelta atrás.
+  Avance (15-11): paquete `dist/subida_final/` (127 archivos públicos, sin `.claude/`, `CLAUDE.md`, `docs/`, `BD_v2/`, `arquitectura/`, `tests/`, `.git/`, `.env` ni `dist/`), probado en local (49 PHP sin errores, 15 rutas en orden, log vacío). Guía paso a paso con respaldo, scripts 07 y 08, subida por carpetas, pruebas y vuelta atrás en el punto 20 de los pendientes. Se marca cuando Vicente lo suba y se revise CP-47 en producción.
 - [ ] **F5-7 Documentación.** Actualizar estados del Product Backlog, completar Responsable y A/R en las validaciones, actualizar el DAS 4+1 y el manual del panel.
 - [ ] **F5-8 UAT** con GMG Repuestos y acta firmada.
 

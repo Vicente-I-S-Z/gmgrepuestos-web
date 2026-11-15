@@ -76,7 +76,13 @@ function gmgModeloImagen($modeloCompleto) {
     global $GMG_MODELOS_CACHE;
     $corto = gmgModeloCorto($modeloCompleto);
     if (is_array($GMG_MODELOS_CACHE) && !empty($GMG_MODELOS_CACHE[$corto]['imagen_url'])) {
-        return $GMG_MODELOS_CACHE[$corto]['imagen_url'];
+        $imagen = $GMG_MODELOS_CACHE[$corto]['imagen_url'];
+        // Rendimiento (F4-7): si junto a la JPG o PNG hay una versión WebP (pesa un tercio), se usa esa.
+        $webp = preg_replace('/\.(jpe?g|png)$/i', '.webp', $imagen);
+        if ($webp !== $imagen && strpos($webp, '..') === false && is_file(dirname(__DIR__) . '/' . $webp)) {
+            return $webp;
+        }
+        return $imagen;
     }
     return 'img/placeholder-modelo.svg';
 }

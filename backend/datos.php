@@ -119,14 +119,37 @@ function gmgSqlPedidoItems() {
  * Acepta el nombre ("Swift", "Grand Vitara"), el slug ("grand-vitara") o el
  * nombre con la marca ("Suzuki Swift").
  */
-function gmgCondicionModelo($conexion, $modelo, $columnaId = 'p.id') {
+function gmgCondicionModelo($modelo, $columnaId = 'p.id') {
+    // Sentencia preparada (F3-4, RNF-030): devuelve [condición, tipos, parámetros].
     $modelo = trim(preg_replace('/^Suzuki\s+/i', '', (string)$modelo));
-    $m = $conexion->real_escape_string($modelo);
-    return "$columnaId IN (SELECT co.id_repuesto
+    return ["$columnaId IN (SELECT co.id_repuesto
                              FROM compatibilidades co
                              JOIN vehiculos v ON v.id_vehiculo = co.id_vehiculo
                              JOIN modelos mo ON mo.id_modelo = v.id_modelo
-                            WHERE mo.nombre = '$m' OR mo.slug = '$m')";
+                            WHERE mo.nombre = ? OR mo.slug = ?)", 'ss', [$modelo, $modelo]];
+}
+
+/**
+ * Registra una búsqueda de la tienda sin resultados (F3-10, E2-H10, RF-017): suma 1 al término
+ * con su modelo y categoría (tabla del script BD_v2/08). Sin IP ni datos personales; cada IP
+ * registra como máximo 30 términos cada 10 minutos para que nadie llene la tabla.
+ */
+function gmgRegistrarBusquedaSinResultado($conexion, $termino, $modelo = '', $categoria = '') {
+    $termino = mb_substr(mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string)$termino))), 0, 100);
+    if ($termino === '' || gmgLimiteSuperado($conexion, 'busqueda_vacia', 30, 600)) {
+        return;
+    }
+    $modelo = mb_substr(trim((string)$modelo), 0, 50);
+    $categoria = mb_substr(trim((string)$categoria), 0, 80);
+    $stmt = $conexion->prepare("INSERT INTO busquedas_sin_resultado (termino, modelo, categoria) VALUES (?, ?, ?)
+                                ON DUPLICATE KEY UPDATE veces = veces + 1, ultima_vez = NOW()");
+    if (!$stmt) {
+        error_log('[GMG Búsquedas] No se pudo registrar (¿falta BD_v2/08?): ' . $conexion->error);
+        return;
+    }
+    $stmt->bind_param('sss', $termino, $modelo, $categoria);
+    $stmt->execute();
+    $stmt->close();
 }
 
 /**

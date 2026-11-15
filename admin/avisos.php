@@ -64,6 +64,14 @@ if ($tablaLista) {
     }
 }
 
+// Lo que buscaron en la tienda y no encontraron (F3-10, E2-H10): los 20 términos más pedidos de los últimos 90 días.
+$busquedasVacias = [];
+$r = $conexion->query("SELECT termino, modelo, categoria, veces, ultima_vez FROM busquedas_sin_resultado
+                        WHERE ultima_vez >= NOW() - INTERVAL 90 DAY ORDER BY veces DESC, ultima_vez DESC LIMIT 20");
+if ($r) {
+    $busquedasVacias = $r->fetch_all(MYSQLI_ASSOC);
+}
+
 gmgAdminCabecera('Avisos de stock', 'avisos');
 ?>
 
@@ -143,6 +151,31 @@ gmgAdminCabecera('Avisos de stock', 'avisos');
             </div>
 
             <?php endif; ?>
+
+            <h2 class="admin-subtitulo">Lo que buscaron y no encontraron</h2>
+            <p class="form-ayuda">Búsquedas de la tienda sin resultados en los últimos 90 días (las 20 más repetidas). Sirve para decidir qué repuestos agregar al catálogo.</p>
+            <div class="admin-panel">
+                <div class="admin-table-wrap">
+                    <?php if (!$busquedasVacias): ?>
+                        <p class="admin-empty">Todavía no hay búsquedas sin resultados.</p>
+                    <?php else: ?>
+                        <table class="admin-table">
+                            <thead><tr><th>Buscaron</th><th>Modelo</th><th>Categoría</th><th>Veces</th><th>Última vez</th></tr></thead>
+                            <tbody>
+                                <?php foreach ($busquedasVacias as $b): ?>
+                                <tr>
+                                    <td><?php echo gmgAdminH($b['termino']); ?></td>
+                                    <td><?php echo gmgAdminH($b['modelo'] !== '' ? $b['modelo'] : '—'); ?></td>
+                                    <td><?php echo gmgAdminH($b['categoria'] !== '' ? $b['categoria'] : '—'); ?></td>
+                                    <td><?php echo (int)$b['veces']; ?></td>
+                                    <td><?php echo gmgAdminH(date('d-m-Y H:i', strtotime($b['ultima_vez']))); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </main>
 <?php gmgAdminPie(); ?>

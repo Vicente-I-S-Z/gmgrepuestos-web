@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es-CL">
+<head><meta charset="utf-8"><title>Prueba de accesibilidad</title></head>
+<body style="margin:0">
+<!--
+  Página de prueba de tests/accesibilidad_test.php (F4-8). Carga páginas reales en iframes y revisa:
+  botón del chat, nombres accesibles de campos, alt de fotos, contraste de textos clave y movimiento
+  reducido (Edge se abre con --force-prefers-reduced-motion). No se publica (tests/).
+-->
+<iframe id="a" style="width:1200px;height:700px;border:0"></iframe>
+<iframe id="b" style="width:1200px;height:700px;border:0"></iframe>
+<pre id="resultado">pendiente</pre>
+<script>
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const cargar = (iframe, url) => new Promise(r => { iframe.addEventListener('load', r, { once: true }); iframe.src = url; });
+function rgb(c) { const m = c.match(/[\d.]+/g) || [0, 0, 0, 0]; return m.map(Number); }
+function lum([r, g, b]) { return [r, g, b].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((t, v, i) => t + v * [0.2126, 0.7152, 0.0722][i], 0); }
+function fondo(el, w) {
+    for (let e = el; e; e = e.parentElement) {
+        const c = rgb(w.getComputedStyle(e).backgroundColor);
+        if (c.length < 4 || c[3] > 0.9) return c;
+    }
+    return [255, 255, 255];
+}
+function contraste(el, w) {
+    const a = lum(rgb(w.getComputedStyle(el).color)), b = lum(fondo(el, w));
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+function nombreAccesible(el, d) {
+    if (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || el.title) return true;
+    if (el.id && d.querySelector('label[for="' + el.id + '"]')) return true;
+    return !!el.closest('label');
+}
+(async () => {
+    const r = {};
+    const a = document.getElementById('a'), b = document.getElementById('b');
+    await Promise.all([cargar(a, '/index.php?modelo=swift'), cargar(b, '/producto.php?id=' + new URLSearchParams(location.search).get('id'))]);
+    await esperar(800);
+    const d = a.contentDocument, w = a.contentWindow;
+
+    const toggle = d.getElementById('gmgChatToggle');
+    r.toggleEsBoton = toggle.tagName === 'BUTTON';
+    toggle.click();
+    r.ariaAbierto = toggle.getAttribute('aria-expanded');
+    toggle.click();
+    r.ariaCerrado = toggle.getAttribute('aria-expanded');
+
+    r.camposSinNombre = [];
+    for (const [doc] of [[d], [b.contentDocument]]) {
+        doc.querySelectorAll('input:not([type=hidden]), select, textarea, button').forEach(el => {
+            const tieneTexto = el.tagName === 'BUTTON' && el.textContent.trim() !== '';
+            if (!tieneTexto && !nombreAccesible(el, doc)) r.camposSinNombre.push(el.tagName + '#' + (el.id || el.name || el.className));
+        });
+    }
+    r.fotosSinAlt = [...d.querySelectorAll('.producto-img'), ...b.contentDocument.querySelectorAll('.ficha-galeria img')].filter(i => !i.getAttribute('alt')).length;
+
+    const muestras = {
+        'precio': d.querySelector('.producto-precio'), 'disponible': d.querySelector('.gmg-disponibilidad--ok'),
+        'pocas': d.querySelector('.gmg-disponibilidad--pocas'), 'sin stock': d.querySelector('.gmg-disponibilidad--agotado'),
+        'resumen del listado': d.querySelector('.listado-resumen'), 'detalle de la tarjeta': d.querySelector('.producto-detalles p'),
+        'paginación': d.querySelector('.paginacion a'), 'aviso de privacidad del chat': d.querySelector('.gmg-chat-privacidad'),
+        'botón WhatsApp del carrito': d.querySelector('.btn-whatsapp-carrito'), 'nota de la ficha': b.contentDocument.querySelector('.ficha-nota')
+    };
+    r.contrastes = {};
+    for (const [n, el] of Object.entries(muestras)) {
+        if (el) { const vista = el.ownerDocument.defaultView; r.contrastes[n] = Math.round(contraste(el, vista) * 100) / 100; }
+    }
+    r.movimientoReducido = w.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    r.transicionWhatsapp = w.getComputedStyle(d.querySelector('.gmg-wa-flotante')).transitionDuration;
+    r.focoVisible = [...d.styleSheets].some(h => { try { return [...h.cssRules].some(x => (x.selectorText || '').includes(':focus-visible')); } catch (e) { return false; } });
+    document.getElementById('resultado').textContent = JSON.stringify(r);
+})();
+</script>
+</body>
+</html>

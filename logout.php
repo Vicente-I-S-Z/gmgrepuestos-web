@@ -1,8 +1,7 @@
 <?php
 require_once 'backend/auth.php';
 
-$_SESSION = [];
-session_destroy();
+gmgCerrarSesion(); // vacía la sesión y borra la cookie (F3-1)
 
 header('Location: login.php');
 exit;

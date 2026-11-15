@@ -72,6 +72,63 @@ function gmgAplicarSeguridadConexion() {
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: strict-origin-when-cross-origin');
+    // CSP básica (F3-5, RNF-031, RNF-038): solo recursos del propio sitio, más Google Fonts,
+    // el mapa de Google (Contacto) e imágenes por HTTPS. 'unsafe-inline' se mantiene por los
+    // onerror/onsubmit y el script del dashboard; sacarlos permitiría una política más estricta.
+    // Mercado Pago y WhatsApp son navegaciones (no las limita esta política).
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; "
+         . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+         . "img-src 'self' data: blob: https:; connect-src 'self'; frame-src https://www.google.com; "
+         . "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
+    // El micrófono se usa para dictar en el chat; cámara, ubicación y pagos del navegador, no.
+    header('Permissions-Policy: camera=(), geolocation=(), payment=(), microphone=(self)');
+}
+
+/**
+ * Abre la sesión con la cookie protegida (F3-1, INC-08, RNF-002): no la lee JavaScript
+ * (HttpOnly), solo viaja por HTTPS cuando el sitio está en HTTPS (Secure), no se envía
+ * desde otros sitios en formularios (SameSite=Lax) y no acepta ids de sesión inventados.
+ */
+function gmgIniciarSesion() {
+    if (session_status() !== PHP_SESSION_NONE) {
+        return;
+    }
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => gmgEsHttps(), 'httponly' => true, 'samesite' => 'Lax']);
+    session_start();
+}
+
+/** Clave del contador: acción + hash del identificador (la IP si no se indica). Nunca se guarda la IP. */
+function gmgClaveLimite(string $accion, ?string $identificador = null): string {
+    return substr($accion, 0, 30) . ':' . hash('sha256', $identificador ?? ($_SERVER['REMOTE_ADDR'] ?? 'sin-ip'));
+}
+
+/** ¿El contador ya llegó al máximo dentro de la ventana? Solo lee, no suma (bloqueo del login, F3-1). */
+function gmgLimiteAlcanzado(mysqli $conexion, string $accion, int $maximo, int $segundos, ?string $identificador = null): bool {
+    $clave = gmgClaveLimite($accion, $identificador);
+    $desde = time() - $segundos;
+    $stmt = $conexion->prepare("SELECT contador FROM limites_solicitudes WHERE clave = ? AND ventana_inicio > ?");
+    if (!$stmt) {
+        error_log('[GMG Límites] No se pudo leer el contador: ' . $conexion->error);
+        return false;
+    }
+    $stmt->bind_param('si', $clave, $desde);
+    $stmt->execute();
+    $fila = $stmt->get_result()->fetch_row();
+    $stmt->close();
+    return (int)($fila[0] ?? 0) >= $maximo;
+}
+
+/** Borra un contador (por ejemplo, los intentos fallidos después de entrar bien). */
+function gmgLimiteReiniciar(mysqli $conexion, string $accion, ?string $identificador = null): void {
+    $clave = gmgClaveLimite($accion, $identificador);
+    $stmt = $conexion->prepare("DELETE FROM limites_solicitudes WHERE clave = ?");
+    if ($stmt) {
+        $stmt->bind_param('s', $clave);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 
 /**
@@ -79,9 +136,8 @@ function gmgAplicarSeguridadConexion() {
  * Requiere la tabla limites_solicitudes (BD_v2/05_tablas_panel.sql).
  * Devuelve true si la IP ya superó el máximo en la ventana actual.
  */
-function gmgLimiteSuperado(mysqli $conexion, string $accion, int $maximo, int $segundos): bool {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'sin-ip';
-    $clave = substr($accion, 0, 30) . ':' . hash('sha256', $ip);
+function gmgLimiteSuperado(mysqli $conexion, string $accion, int $maximo, int $segundos, ?string $identificador = null): bool {
+    $clave = gmgClaveLimite($accion, $identificador);
     $ahora = time();
     $limiteVentana = $ahora - $segundos;
     $stmt = $conexion->prepare("INSERT INTO limites_solicitudes (clave, ventana_inicio, contador) VALUES (?, ?, 1)

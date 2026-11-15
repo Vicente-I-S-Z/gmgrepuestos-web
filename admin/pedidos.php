@@ -42,32 +42,45 @@ $busqueda = trim($_GET['q'] ?? '');
 $estadosValidos = ['pendiente', 'aprobado', 'rechazado', 'error'];
 $pagosValidos = ['recibido', 'pendiente', 'rechazado'];
 
+// Filtros con sentencia preparada (F3-4, RNF-030).
 $condiciones = [];
+$tipos = '';
+$params = [];
 if (in_array($filtro, $estadosValidos, true)) {
-    $condiciones[] = "estado = '" . $conexion->real_escape_string($filtro) . "'";
+    $condiciones[] = "estado = ?";
+    $tipos .= 's';
+    $params[] = $filtro;
 }
 if (in_array($filtroPago, $pagosValidos, true)) {
-    $condiciones[] = "pago_estado = '" . $conexion->real_escape_string($filtroPago) . "'";
+    $condiciones[] = "pago_estado = ?";
+    $tipos .= 's';
+    $params[] = $filtroPago;
 }
 if ($busqueda !== '') {
-    $busquedaEsc = $conexion->real_escape_string($busqueda);
+    $busquedaLike = '%' . addcslashes($busqueda, '%_\\') . '%';
     $condicionesBusqueda = [
-        "CONCAT(nombre_cliente, ' ', apellido_cliente) LIKE '%$busquedaEsc%'",
-        "rut_cliente LIKE '%$busquedaEsc%'",
-        "telefono_cliente LIKE '%$busquedaEsc%'",
-        "email_cliente LIKE '%$busquedaEsc%'",
+        "CONCAT(nombre_cliente, ' ', apellido_cliente) LIKE ?",
+        "rut_cliente LIKE ?",
+        "telefono_cliente LIKE ?",
+        "email_cliente LIKE ?",
     ];
+    $tipos .= 'ssss';
+    array_push($params, $busquedaLike, $busquedaLike, $busquedaLike, $busquedaLike);
     // Base v2: el RUT se guarda sin puntos, así que también se compara sin
     // puntos ni guion (ej: buscar "21.740.488" encuentra "21740488-6").
     $rutBuscado = preg_replace('/[^0-9K]/', '', strtoupper($busqueda));
     if (strlen($rutBuscado) >= 6) {
-        $condicionesBusqueda[] = "REPLACE(rut_cliente, '-', '') LIKE '%" . $conexion->real_escape_string($rutBuscado) . "%'";
+        $condicionesBusqueda[] = "REPLACE(rut_cliente, '-', '') LIKE ?";
+        $tipos .= 's';
+        $params[] = '%' . $rutBuscado . '%';
     }
     // Si la búsqueda trae dígitos (ej. "#5", "5", "pedido 5"), también se
     // compara directo contra el número de pedido.
     $soloNumeros = preg_replace('/[^0-9]/', '', $busqueda);
     if ($soloNumeros !== '') {
-        $condicionesBusqueda[] = "id = " . (int)$soloNumeros;
+        $condicionesBusqueda[] = "id = ?";
+        $tipos .= 'i';
+        $params[] = (int)$soloNumeros;
     }
     $condiciones[] = '(' . implode(' OR ', $condicionesBusqueda) . ')';
 }
@@ -79,11 +92,16 @@ if (!empty($condiciones)) {
 $sql .= " ORDER BY fecha DESC";
 
 $pedidos = [];
-$r = $conexion->query($sql);
-if ($r) {
-    while ($fila = $r->fetch_assoc()) {
-        $pedidos[] = $fila;
+$stmt = $conexion->prepare($sql);
+if ($stmt) {
+    if ($tipos !== '') {
+        $stmt->bind_param($tipos, ...$params);
     }
+    $stmt->execute();
+    $pedidos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+} else {
+    error_log('[GMG Pedidos] No se pudo preparar el listado: ' . $conexion->error);
 }
 
 // --- Items de cada pedido ---

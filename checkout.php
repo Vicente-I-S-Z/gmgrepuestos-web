@@ -13,6 +13,12 @@ require_once 'backend/config.php';
 require_once 'backend/datos.php';
 require_once 'backend/email_helpers.php';
 
+// Límite por IP (F3-3, RNF-035): 10 intentos de compra cada 10 minutos.
+if (gmgLimiteSuperado($conexion, 'checkout', 10, 600)) {
+    echo json_encode(['success' => false, 'message' => 'Hiciste muchos intentos de pago seguidos. Espera unos minutos o escríbenos por WhatsApp.']);
+    exit;
+}
+
 $input = file_get_contents('php://input');
 $data = json_decode($input, true);
 
@@ -23,12 +29,16 @@ if (!$data || !isset($data['items']) || !is_array($data['items']) || empty($data
 
 // --- Datos del cliente (obligatorios; GMG Repuestos no hace envíos,
 //     por eso NO se pide dirección, solo datos de contacto) ---
-$cliente = $data['cliente'] ?? [];
-$nombreCliente = trim($cliente['nombre'] ?? '');
-$apellidoCliente = trim($cliente['apellido'] ?? '');
-$rutCliente = trim($cliente['rut'] ?? '');
-$telefonoCliente = trim($cliente['telefono'] ?? '');
-$emailCliente = trim($cliente['email'] ?? '');
+// Solo texto: un campo enviado como arreglo cortaba la página en PHP 8 (hallazgo de F2-7).
+$cliente = isset($data['cliente']) && is_array($data['cliente']) ? $data['cliente'] : [];
+$campoCliente = function ($clave) use ($cliente) {
+    return isset($cliente[$clave]) && is_string($cliente[$clave]) ? trim($cliente[$clave]) : '';
+};
+$nombreCliente = $campoCliente('nombre');
+$apellidoCliente = $campoCliente('apellido');
+$rutCliente = $campoCliente('rut');
+$telefonoCliente = $campoCliente('telefono');
+$emailCliente = $campoCliente('email');
 
 if ($nombreCliente === '' || $apellidoCliente === '' || $rutCliente === '' || $telefonoCliente === '' || $emailCliente === '') {
     echo json_encode(['success' => false, 'message' => 'Faltan datos del cliente (nombre, apellido, RUT, teléfono y correo son obligatorios).']);

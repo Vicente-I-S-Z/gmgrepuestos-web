@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================
     function toggleChat() {
         chatWindow.classList.toggle('active');
+        if (chatToggleBtn) chatToggleBtn.setAttribute('aria-expanded', chatWindow.classList.contains('active') ? 'true' : 'false');
         if (chatWindow.classList.contains('active')) {
             chatHasBeenOpened = true;
             ocultarBurbujaProactiva();
@@ -102,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function abrirChat() {
         chatWindow.classList.add('active');
+        if (chatToggleBtn) chatToggleBtn.setAttribute('aria-expanded', 'true');
         chatHasBeenOpened = true;
         ocultarBurbujaProactiva();
         scrollToBottom();
@@ -121,15 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }));
 
-    // El botón flotante también se puede usar con el teclado (Enter o Espacio).
-    if (chatToggleBtn) {
-        chatToggleBtn.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                toggleChat();
-            }
-        });
-    }
+    // El botón flotante es un <button> (F4-8): Enter y Espacio funcionan solos, sin código extra.
 
     // Avisos breves dentro del chat (reemplazan a las ventanas emergentes del navegador).
     let temporizadorAviso = null;
@@ -399,6 +393,27 @@ document.addEventListener('DOMContentLoaded', () => {
             isWaitingResponse = false;
             if (chatInput) chatInput.focus();
         }
+    }
+
+    // Seguir por WhatsApp con un resumen de la conversación (F3-6, E5-H7, RF-042):
+    // lo que preguntó el cliente (modelo, año, repuesto) y los repuestos que le mostró el asistente.
+    function resumenWhatsApp() {
+        const preguntas = historialConversacion.filter(t => t.rol === 'user' && t.texto).slice(-3).map(t => t.texto.trim());
+        const conProductos = historialConversacion.filter(t => t.rol === 'bot' && Array.isArray(t.productos) && t.productos.length).slice(-1)[0];
+        let texto = 'Hola, vengo del asistente de la página web.';
+        if (preguntas.length) texto += '\nMi consulta: ' + preguntas.join(' / ').slice(0, 400);
+        if (conProductos) {
+            texto += '\nRepuestos que me mostró: ' + conProductos.productos.slice(0, 3)
+                .map(p => p.nombre + (p.sku ? ' (SKU ' + p.sku + ')' : '')).join('; ');
+        }
+        return texto;
+    }
+    const chatWhatsappBtn = document.getElementById('gmgChatWhatsapp');
+    if (chatWhatsappBtn) {
+        chatWhatsappBtn.addEventListener('click', () => {
+            const base = chatWhatsappBtn.href.split('?')[0];
+            chatWhatsappBtn.href = base + '?text=' + encodeURIComponent(resumenWhatsApp());
+        });
     }
 
     function registrarTurnoHistorial(rol, texto, productos, mensajeId, imagenes) {

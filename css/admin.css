@@ -1,3 +1,5 @@
+/* Panel: la fuente se pide aquí (en la tienda va con <link> y preconnect, F4-7). */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
 /* =========================================================
    Panel de Administración - GMG Repuestos
    Reutiliza las variables de color definidas en style.css
@@ -966,3 +968,20 @@ table.admin-table {
     margin: 0;
     flex-shrink: 0;
 }
+
+/* ---------- Productos: edición rápida y fotos (F2-8) ---------- */
+.input-pesos { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.input-rapido { width: 96px; min-height: 40px; padding: 6px 8px; border: 1px solid #ccc; border-radius: var(--radius-sm); font-size: 0.9rem; }
+.input-rapido.input-stock { width: 72px; }
+.input-rapido:focus { outline: 2px solid var(--color-acento); outline-offset: 1px; border-color: transparent; }
+.btn-rapido { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; padding: 6px 10px; min-height: 32px; border: none; border-radius: var(--radius-sm); background: var(--color-principal); color: #fff; cursor: pointer; }
+.btn-rapido:hover { background: var(--color-acento); }
+.fotos-repuesto { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 8px; }
+.foto-casilla { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #e3e3e3; border-radius: var(--radius-sm); background: #fafafa; }
+.foto-casilla-titulo { font-weight: 700; font-size: 0.85rem; }
+.foto-casilla-img { width: 100%; max-width: 200px; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border-radius: var(--radius-sm); }
+.foto-casilla-vacia { display: flex; align-items: center; justify-content: center; max-width: 200px; aspect-ratio: 4 / 3; color: #888; font-size: 0.85rem; border: 1px dashed #ccc; border-radius: var(--radius-sm); }
+.admin-form .foto-casilla input[type="file"] { padding: 6px; background: #fff; }
+
+/* Subtítulo de sección del panel (F3-10) */
+.admin-subtitulo { margin: 36px 0 6px; font-size: 1.15rem; }

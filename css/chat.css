@@ -20,6 +20,8 @@
     z-index: 9999;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
     border: 2px solid #ffffff;
+    padding: 0; /* es un <button> (F4-8) */
+    font: inherit;
 }
 
 .gmg-chat-toggle:hover {
@@ -699,3 +701,12 @@
     .gmg-chip { min-height: 32px; }
 }
 .gmg-chat-toggle:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+
+/* Seguir por WhatsApp desde el chat (F3-6) */
+.gmg-chat-wa-btn { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; margin-right: 6px; border-radius: 999px; background: #25D366; color: #0B3D1E; font-size: 0.8rem; font-weight: 700; text-decoration: none; }
+.gmg-chat-wa-btn:hover { background: #1EBE5B; }
+.gmg-chat-wa-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Aviso de privacidad (F3-7) */
+.gmg-chat-privacidad { margin: 0; padding: 6px 14px; font-size: 0.72rem; line-height: 1.35; color: #555; background: #F5F5F5; border-bottom: 1px solid #e6e6e6; }
+.gmg-chat-privacidad a { color: #B71C1C; font-weight: 600; }

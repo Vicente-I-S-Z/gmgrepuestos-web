@@ -10,9 +10,7 @@ require_once __DIR__ . '/chat_busqueda.php';
 // 1) Límite de mensajes por sesión (anti-abuso / control de costo)
 // =========================================================
 function chatVerificarLimite() {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    gmgIniciarSesion(); // cookie protegida (F3-1)
     $ahora = time();
     if (!isset($_SESSION['gmg_chat_timestamps']) || !is_array($_SESSION['gmg_chat_timestamps'])) {
         $_SESSION['gmg_chat_timestamps'] = [];

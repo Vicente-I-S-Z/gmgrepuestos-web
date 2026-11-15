@@ -6,19 +6,33 @@
 // llama a este endpoint.
 header('Content-Type: application/json; charset=utf-8');
 require_once 'config.php';
+require_once 'datos.php';
+
+// Límite por IP (F3-3, RNF-035): 5 avisos cada 10 minutos.
+if (gmgLimiteSuperado($conexion, 'aviso_stock', 5, 600)) {
+    echo json_encode(['status' => 'error', 'mensaje' => 'Ya registraste varios avisos. Espera unos minutos o escríbenos por WhatsApp.']);
+    exit;
+}
 
 $input = json_decode(file_get_contents('php://input'), true);
 $productoId = (int)($input['producto_id'] ?? 0);
-$contacto = trim((string)($input['contacto'] ?? ''));
-$sesionId = trim((string)($input['sesion_id'] ?? ''));
+$contacto = isset($input['contacto']) && is_string($input['contacto']) ? trim($input['contacto']) : '';
+$sesionId = isset($input['sesion_id']) && is_string($input['sesion_id']) ? trim($input['sesion_id']) : '';
 
 if ($productoId <= 0 || $contacto === '') {
     echo json_encode(['status' => 'error', 'mensaje' => 'Faltan datos para registrar el aviso.']);
     exit;
 }
 
-if (mb_strlen($contacto) > 150) {
-    $contacto = mb_substr($contacto, 0, 150);
+// Correo o celular chileno (F3-11): así el aviso se puede enviar después (F3-9).
+$telefono = gmgTelefonoChile($contacto);
+if (filter_var($contacto, FILTER_VALIDATE_EMAIL) && mb_strlen($contacto) <= 150) {
+    $contacto = mb_strtolower($contacto);
+} elseif ($telefono !== '') {
+    $contacto = $telefono;
+} else {
+    echo json_encode(['status' => 'error', 'mensaje' => 'Escribe un correo o un celular chileno (por ejemplo +56 9 1234 5678).']);
+    exit;
 }
 if (mb_strlen($sesionId) > 64) {
     $sesionId = mb_substr($sesionId, 0, 64);

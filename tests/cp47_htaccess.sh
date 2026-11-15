@@ -69,18 +69,34 @@ done
 
 echo "== Lógica interna del backend (403) =="
 for n in bot_config config auth chat_helpers chat_busqueda email_config email_helpers SmtpMailer modelos datos \
-         entorno seguridad conocimiento pagina_publica auditoria pagos admin_ui pedido_estado; do
+         entorno seguridad conocimiento pagina_publica auditoria pagos admin_ui pedido_estado fotos limpiar_chat; do
     esperar 403 "backend/$n.php"
 done
 
 echo "== Sitio público (200) y panel (302 al login) =="
 for r in "" "index.php" "index.php?modelo=swift" "login.php" "contacto.php" "mi-pedido.php" \
          "css/style.css" "js/chat.js" "img/fronx.jpg" \
-         "backend/buscar_sugerencias.php?q=filtro" "backend/chat.php"; do
+         "backend/buscar_sugerencias.php?q=filtro" "backend/chat.php" "sitemap.xml" "robots.txt" "producto.php?id=1"; do
     esperar 200 "$r"
 done
 esperar 302 "admin/"
 esperar 404 "no-existe-esta-pagina.php"
+
+echo "== Rendimiento (F4-7): compresión y caché =="
+cabecera() { # texto esperado en las cabeceras, ruta, descripción
+    if curl -s -D - -o /dev/null -H 'Accept-Encoding: gzip' "$U/$2" | grep -qi "$1"; then
+        printf "ok     /%s: %s
+" "$2" "$3"
+    else
+        printf "FALLA  /%s: falta %s
+" "$2" "$3"
+        FALLAS=$((FALLAS + 1))
+    fi
+}
+cabecera 'Content-Encoding: gzip' "css/style.css" "comprimido"
+cabecera 'Content-Encoding: gzip' "index.php" "comprimido"
+cabecera 'Cache-Control: max-age=31536000' "css/style.css" "caché de 1 año"
+cabecera 'Cache-Control: max-age=2592000' "img/swift.webp" "caché de 1 mes"
 
 echo
 if [ "$FALLAS" -eq 0 ]; then echo "TODO OK"; else echo "FALLAS: $FALLAS"; exit 1; fi

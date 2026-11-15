@@ -46,9 +46,11 @@ $correoContacto = gmgConocimiento($conexion, 'email');
 
             <h2>Cuánto tiempo guardamos tus datos</h2>
             <p>Los conservamos mientras sea necesario para gestionar tu compra, atender reclamos o garantías y cumplir con las obligaciones legales y tributarias. Después, se eliminan o se dejan sin identificar.</p>
+            <p>Las conversaciones con el Asistente Virtual se borran automáticamente 12 meses después del último mensaje.</p>
 
-            <h2>Tus derechos</h2>
-            <p>Puedes pedirnos en cualquier momento <strong>acceder</strong> a tus datos, <strong>corregirlos</strong>, <strong>eliminarlos</strong> o <strong>oponerte</strong> a que los usemos para un fin determinado, salvo cuando la ley nos obligue a conservarlos. Para hacerlo, escríbenos<?php if ($correoContacto !== ''): ?> a <a href="mailto:<?php echo gmgH($correoContacto); ?>"><?php echo gmgH($correoContacto); ?></a><?php endif; ?> o por la página de <a href="contacto.php">Contacto</a>, indicando tu nombre y RUT.</p>
+            <h2 id="tus-derechos">Tus derechos</h2>
+            <p>Puedes pedirnos en cualquier momento <strong>acceder</strong> a tus datos, <strong>corregirlos</strong>, <strong>eliminarlos</strong> o <strong>oponerte</strong> a que los usemos para un fin determinado, salvo cuando la ley nos obligue a conservarlos.</p>
+            <p><strong>Cómo pedirlo:</strong> escríbenos por <a href="<?php echo gmgH(gmgEnlaceWhatsApp('Hola, quiero ejercer mis derechos sobre mis datos personales (acceso, corrección o eliminación). Mi nombre y RUT son: ')); ?>" target="_blank" rel="noopener">WhatsApp</a><?php if ($correoContacto !== ''): ?> o al correo <a href="mailto:<?php echo gmgH($correoContacto); ?>?subject=<?php echo rawurlencode('Mis datos personales'); ?>"><?php echo gmgH($correoContacto); ?></a><?php endif; ?>, indicando tu nombre, tu RUT y qué necesitas.</p>
 
             <h2>Seguridad</h2>
             <p>El sitio usa conexión cifrada (HTTPS) y protege el acceso a su sistema de administración. Aun así, ningún sistema en Internet es completamente infalible, por lo que te pedimos cuidar tus propios datos y dispositivos.</p>

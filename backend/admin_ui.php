@@ -16,9 +16,7 @@ function gmgAdminH($texto) {
  * web envíe cambios al panel en nombre del administrador sin que lo sepa.
  */
 function gmgCsrfToken() {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    gmgIniciarSesion(); // cookie protegida (F3-1)
     if (empty($_SESSION['gmg_csrf'])) {
         $_SESSION['gmg_csrf'] = bin2hex(random_bytes(32));
     }

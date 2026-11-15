@@ -206,7 +206,7 @@ function enviarCorreoActualizacionPedido($conexion, $pedidoId, $estadoNuevo) {
     $nombreCliente = trim(($pedido['nombre_cliente'] ?? '') . ' ' . ($pedido['apellido_cliente'] ?? ''));
     $total = number_format((float)$pedido['total'], 0, ',', '.');
     $tablaItems = emailTablaItems($pedido['items']);
-    $whatsapp = htmlspecialchars(EMAIL_WHATSAPP_NUMBER);
+    $whatsapp = htmlspecialchars(function_exists('gmgNumeroWhatsApp') ? gmgNumeroWhatsApp() : EMAIL_WHATSAPP_NUMBER);
     $linkWhatsapp = "https://wa.me/{$whatsapp}?text=" . rawurlencode("Hola, quiero coordinar mi pedido #{$pedidoId}");
 
     switch ($estadoNuevo) {
@@ -254,4 +254,67 @@ HTML;
 
     return emailEnviar($pedido['email_cliente'], $nombreCliente, $asunto, $html);
 }
-?>
+
+/**
+ * Correo de reposición (F3-9, E7-H3, RF-064): cuando un repuesto vuelve a tener stock, avisa
+ * por correo a quienes lo pidieron (avisos_stock pendientes cuyo contacto es un correo) y los
+ * marca como notificados. Los avisos por celular quedan pendientes para escribirles por
+ * WhatsApp desde el panel "Avisos de stock". Si un correo falla, ese aviso queda pendiente.
+ * $enviar: función de envío (por defecto emailEnviar; las pruebas pasan una falsa).
+ * Devuelve cuántos correos se enviaron.
+ */
+function gmgNotificarReposicion($conexion, $idRepuesto, ?callable $enviar = null) {
+    $enviar = $enviar ?? 'emailEnviar';
+    $stmt = $conexion->prepare("SELECT nombre, sku, precio, stock FROM repuestos WHERE id_repuesto = ? AND activo = 1");
+    $stmt->bind_param('i', $idRepuesto);
+    $stmt->execute();
+    $repuesto = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$repuesto || (int)$repuesto['stock'] <= 0) {
+        return 0;
+    }
+
+    $stmt = $conexion->prepare("SELECT id_aviso, contacto FROM avisos_stock WHERE id_repuesto = ? AND notificado = 0 AND contacto LIKE '%@%'");
+    $stmt->bind_param('i', $idRepuesto);
+    $stmt->execute();
+    $avisos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    if (!$avisos) {
+        return 0;
+    }
+
+    // Dirección pública del sitio (desde el panel, gmgUrlBase() termina en /admin).
+    $base = preg_replace('#/admin$#', '', gmgUrlBase());
+    $nombre = htmlspecialchars($repuesto['nombre'], ENT_QUOTES, 'UTF-8');
+    $sku = htmlspecialchars($repuesto['sku'], ENT_QUOTES, 'UTF-8');
+    $precio = number_format((float)$repuesto['precio'], 0, ',', '.');
+    $enlace = htmlspecialchars($base . '/producto.php?id=' . (int)$idRepuesto, ENT_QUOTES, 'UTF-8');
+    $whatsapp = htmlspecialchars('https://wa.me/' . preg_replace('/\D/', '', function_exists('gmgNumeroWhatsApp') ? gmgNumeroWhatsApp() : EMAIL_WHATSAPP_NUMBER) . '?text='
+        . rawurlencode('Hola, me avisaron que llegó el repuesto ' . $repuesto['nombre'] . ' (SKU ' . $repuesto['sku'] . ')'), ENT_QUOTES, 'UTF-8');
+    $contenido = <<<HTML
+<h2 style="color:#111; margin-top:0;">¡Volvió a llegar tu repuesto!</h2>
+<p>Hola, nos pediste que te avisáramos cuando tuviéramos stock de <strong>{$nombre}</strong> (SKU {$sku}). Ya está disponible a <strong>\${$precio}</strong>.</p>
+<p>Las unidades son limitadas, así que te recomendamos asegurarlo pronto.</p>
+<p style="margin-top:24px;"><a href="{$enlace}" style="display:inline-block; background:#D32F2F; color:#fff; padding:10px 20px; border-radius:4px; text-decoration:none; font-weight:bold;">Ver el repuesto</a>
+&nbsp;<a href="{$whatsapp}" style="display:inline-block; background:#25D366; color:#0B3D1E; padding:10px 20px; border-radius:4px; text-decoration:none; font-weight:bold;">Consultar por WhatsApp</a></p>
+<p style="color:#888; font-size:0.8rem;">Recibes este correo porque dejaste tu contacto en GMG Repuestos para este aviso. No te volveremos a escribir por este repuesto.</p>
+HTML;
+    $html = emailPlantillaBase($contenido);
+    $asunto = 'Ya tenemos stock: ' . $repuesto['nombre'];
+
+    $enviados = 0;
+    $marcar = $conexion->prepare("UPDATE avisos_stock SET notificado = 1 WHERE id_aviso = ?");
+    foreach ($avisos as $aviso) {
+        $resultado = $enviar($aviso['contacto'], '', $asunto, $html);
+        if (!empty($resultado['success'])) {
+            $idAviso = (int)$aviso['id_aviso'];
+            $marcar->bind_param('i', $idAviso);
+            $marcar->execute();
+            $enviados++;
+        } else {
+            error_log('[GMG Reposición] No se pudo avisar el aviso #' . (int)$aviso['id_aviso'] . ': ' . ($resultado['error'] ?? 'sin detalle'));
+        }
+    }
+    $marcar->close();
+    return $enviados;
+}

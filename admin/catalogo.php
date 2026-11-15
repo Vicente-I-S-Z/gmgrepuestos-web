@@ -15,6 +15,7 @@ requerirAdmin('../');
 require_once '../backend/config.php';
 require_once '../backend/admin_ui.php';
 require_once '../backend/auditoria.php';
+require_once '../backend/fotos.php';
 
 $carrocerias = ['Hatchback', 'Sedán', 'Crossover', 'SUV', 'Todoterreno', 'Minivan', 'Furgón', 'Camioneta'];
 $combustibles = ['Bencina', 'Diésel'];
@@ -48,35 +49,7 @@ function gmgCatalogoExiste($conexion, $sql, $tipos, array $valores) {
     return $existe;
 }
 
-/**
- * Guarda la foto de un modelo. Devuelve [ruta|null, error|null].
- * Acepta JPG, PNG o WebP de hasta 2 MB, comprobando que de verdad sea una imagen.
- */
-function gmgCatalogoGuardarFoto(array $archivo, $slug) {
-    if ($archivo['error'] === UPLOAD_ERR_NO_FILE) {
-        return [null, null];
-    }
-    if ($archivo['error'] !== UPLOAD_ERR_OK) {
-        return [null, 'No se pudo subir la foto (puede ser muy pesada). Usa una imagen de hasta 2 MB.'];
-    }
-    if ($archivo['size'] > 2 * 1024 * 1024) {
-        return [null, 'La foto pesa más de 2 MB. Reduce su tamaño e inténtalo de nuevo.'];
-    }
-    $info = @getimagesize($archivo['tmp_name']);
-    $permitidos = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
-    if (!$info || !isset($permitidos[$info[2]])) {
-        return [null, 'El archivo no es una imagen válida. Usa un JPG, PNG o WebP.'];
-    }
-    $carpeta = dirname(__DIR__) . '/img/modelos';
-    if (!is_dir($carpeta) && !mkdir($carpeta, 0755, true)) {
-        return [null, 'No se pudo preparar la carpeta de fotos en el servidor.'];
-    }
-    $nombre = $slug . '-' . bin2hex(random_bytes(4)) . '.' . $permitidos[$info[2]];
-    if (!move_uploaded_file($archivo['tmp_name'], $carpeta . '/' . $nombre)) {
-        return [null, 'No se pudo guardar la foto en el servidor.'];
-    }
-    return ['img/modelos/' . $nombre, null];
-}
+// La foto del modelo se guarda con gmgGuardarFoto() (backend/fotos.php, compartida con los repuestos desde F2-8).
 
 if (!isset($_SESSION['gmg_catalogo_aviso'])) {
     $_SESSION['gmg_catalogo_aviso'] = null;
@@ -169,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Foto: si se sube un archivo, tiene prioridad sobre la ruta escrita.
             if (isset($_FILES['imagen'])) {
-                list($rutaSubida, $errorFoto) = gmgCatalogoGuardarFoto($_FILES['imagen'], $slug);
+                list($rutaSubida, $errorFoto) = gmgGuardarFoto($_FILES['imagen'], 'modelos', $slug);
                 if ($errorFoto) {
                     gmgCatalogoAviso($errorFoto, 'error');
                 }

@@ -7,6 +7,12 @@ require_once 'config.php';
 require_once 'datos.php';
 require_once 'chat_busqueda.php';
 
+// Límite por IP (F3-3, RNF-035): 60 por minuto (se pide mientras el cliente escribe).
+if (gmgLimiteSuperado($conexion, 'sugerencias', 60, 60)) {
+    echo json_encode(['sugerencias' => []]);
+    exit;
+}
+
 $q = isset($_GET['q']) && is_string($_GET['q']) ? trim(mb_substr($_GET['q'], 0, 100)) : '';
 $busqueda = mb_strlen($q) >= 2 ? gmgBusquedaTienda($q) : null;
 

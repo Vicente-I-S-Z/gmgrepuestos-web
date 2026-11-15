@@ -35,9 +35,7 @@ function gmgAuditoriaPesos($monto) {
  * @return bool true si quedó registrado
  */
 function gmgAuditar($conexion, $accion, $entidad, $idEntidad, $detalle, $anterior = null, $nuevo = null) {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    gmgIniciarSesion(); // cookie protegida (F3-1)
     $idAdmin = isset($_SESSION['admin_id']) ? (int)$_SESSION['admin_id'] : null;
     $nombreAdmin = isset($_SESSION['admin_nombre']) && $_SESSION['admin_nombre'] !== '' ? (string)$_SESSION['admin_nombre'] : 'Administrador';
     $ip = isset($_SERVER['REMOTE_ADDR']) ? mb_substr((string)$_SERVER['REMOTE_ADDR'], 0, 45) : null;

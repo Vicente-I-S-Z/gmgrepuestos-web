@@ -266,6 +266,29 @@ function gmgBusquedaTienda(string $q, string $alias = 'p'): ?array {
     ];
 }
 
+/**
+ * Privacidad del chat (F3-7, E5-H18, RNF-017): borra las conversaciones sin mensajes en los
+ * últimos $meses meses (por defecto 12). Los mensajes y sus repuestos se borran en cascada.
+ * La llama backend/limpiar_chat.php desde el cron de Hostinger. Devuelve cuántas borró.
+ */
+function chatBorrarConversacionesAntiguas(mysqli $conexion, int $meses = 12): int {
+    $meses = max(1, $meses);
+    $stmt = $conexion->prepare("DELETE c FROM conversaciones_chat c
+                                 WHERE c.creado_en < NOW() - INTERVAL ? MONTH
+                                   AND NOT EXISTS (SELECT 1 FROM mensajes_chat m
+                                                    WHERE m.id_conversacion = c.id_conversacion
+                                                      AND m.creado_en >= NOW() - INTERVAL ? MONTH)");
+    if (!$stmt) {
+        error_log('[GMG Chat] No se pudo preparar la limpieza de conversaciones: ' . $conexion->error);
+        return 0;
+    }
+    $stmt->bind_param('ii', $meses, $meses);
+    $stmt->execute();
+    $borradas = $stmt->affected_rows;
+    $stmt->close();
+    return max(0, $borradas);
+}
+
 /** Etiqueta de stock que entiende el cliente (RF-013). */
 function chatDisponibilidad(int $stock): string {
     if ($stock <= 0) return 'Sin stock';

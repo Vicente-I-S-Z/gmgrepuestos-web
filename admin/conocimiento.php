@@ -14,11 +14,13 @@ require_once '../backend/config.php';
 require_once '../backend/admin_ui.php';
 require_once '../backend/conocimiento.php';
 require_once '../backend/auditoria.php';
+require_once '../backend/datos.php';
 
 $temas = gmgTemasConocimiento();
 $limites = [
     'horario' => 200, 'direccion' => 200, 'telefono' => 40, 'email' => 150,
     'despacho' => 1500, 'medios_pago' => 1500, 'garantia' => 1500, 'devoluciones' => 1500, 'otros' => 1500,
+    'bienvenida' => 400, 'whatsapp' => 20,
 ];
 $mensaje = '';
 $tipoMensaje = '';
@@ -45,6 +47,15 @@ if ($tablaLista && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $nuevos[$clave] = $texto;
             if (mb_strlen($texto) > $limites[$clave]) {
                 $errores[$clave] = 'Máximo ' . $limites[$clave] . ' caracteres (hoy tiene ' . mb_strlen($texto) . ').';
+            }
+        }
+        // WhatsApp de la tienda (F3-8): celular chileno, se guarda como +56 9 1234 5678.
+        if ($nuevos['whatsapp'] !== '') {
+            $celular = gmgTelefonoChile($nuevos['whatsapp']);
+            if ($celular === '') {
+                $errores['whatsapp'] = 'Escribe un celular chileno, por ejemplo +56 9 1234 5678.';
+            } else {
+                $nuevos['whatsapp'] = $celular;
             }
         }
         if ($nuevos['email'] !== '' && !filter_var($nuevos['email'], FILTER_VALIDATE_EMAIL)) {
@@ -122,7 +133,7 @@ gmgAdminCabecera('Textos del asistente', 'asistente');
             <form class="admin-form" method="POST" action="conocimiento.php">
                 <?php echo gmgCsrfCampo(); ?>
                 <?php foreach ($temas as $clave => $info):
-                    $corto = in_array($clave, ['horario', 'direccion', 'telefono', 'email'], true); ?>
+                    $corto = in_array($clave, ['horario', 'direccion', 'telefono', 'email', 'whatsapp'], true); ?>
                     <div style="margin-bottom:18px;">
                         <label for="t_<?php echo gmgAdminH($clave); ?>"><?php echo gmgAdminH($info['titulo']); ?></label>
                         <?php if ($corto): ?>

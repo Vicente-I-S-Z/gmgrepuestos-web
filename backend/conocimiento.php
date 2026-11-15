@@ -28,6 +28,9 @@ function gmgTemasConocimiento() {
         'garantia'     => ['titulo' => 'Garantía',               'ayuda' => 'Garantía legal y garantías propias de la tienda.'],
         'devoluciones' => ['titulo' => 'Cambios y devoluciones', 'ayuda' => 'Cómo pedir un cambio o una devolución.'],
         'otros'        => ['titulo' => 'Otra información',       'ayuda' => 'Cualquier otro dato útil que el asistente pueda responder (opcional).'],
+        // Configuración del chatbot (F3-8, E6-H9, RF-058): no se envían a la IA.
+        'bienvenida'   => ['titulo' => 'Mensaje de bienvenida del chat', 'ayuda' => 'Lo primero que lee el cliente al abrir el chat. Si lo dejas vacío se usa el saludo de siempre.', 'solo_panel' => true],
+        'whatsapp'     => ['titulo' => 'WhatsApp de la tienda',  'ayuda' => 'Celular que reciben los botones de WhatsApp del sitio y del chat. Ej: +56 9 1234 5678. Vacío: se usa el del archivo de configuración.', 'solo_panel' => true],
     ];
 }
 
@@ -60,10 +63,24 @@ function gmgConocimiento($conexion, $clave) {
     return $todo[$clave] ?? '';
 }
 
+/**
+ * Número de WhatsApp de la tienda, solo dígitos (F3-8): el que se configuró en el panel
+ * "Asistente" y, si está vacío, el del .env (WHATSAPP_NUMBER).
+ */
+function gmgNumeroWhatsApp() {
+    static $numero = null;
+    if ($numero === null) {
+        global $conexion;
+        $delPanel = ($conexion instanceof mysqli && !$conexion->connect_error) ? gmgConocimiento($conexion, 'whatsapp') : '';
+        $numero = preg_replace('/\D+/', '', $delPanel !== '' ? $delPanel
+            : (defined('WHATSAPP_NUMBER') ? WHATSAPP_NUMBER : (string)gmgEnv('WHATSAPP_NUMBER', '56900000000')));
+    }
+    return $numero;
+}
+
 /** Enlace de WhatsApp (con mensaje inicial opcional). */
 function gmgEnlaceWhatsApp($mensaje = '') {
-    $numero = defined('WHATSAPP_NUMBER') ? WHATSAPP_NUMBER : (string)gmgEnv('WHATSAPP_NUMBER', '56900000000');
-    $numero = preg_replace('/\D+/', '', $numero);
+    $numero = gmgNumeroWhatsApp();
     $url = 'https://wa.me/' . $numero;
     if ($mensaje !== '') {
         $url .= '?text=' . rawurlencode($mensaje);
@@ -114,7 +131,7 @@ function gmgContextoNegocioParaIA($conexion, array $modelosCortos = []) {
     $txt  = "\n\nBASE DE CONOCIMIENTO DE LA TIENDA (información oficial, configurada por el negocio):\n";
     foreach (gmgTemasConocimiento() as $clave => $info) {
         $valor = $conocimiento[$clave] ?? '';
-        if ($clave === 'otros' && $valor === '') {
+        if (($clave === 'otros' && $valor === '') || !empty($info['solo_panel'])) {
             continue;
         }
         $txt .= '- ' . $info['titulo'] . ': ' . ($valor !== '' ? $valor : 'NO CONFIGURADO') . "\n";

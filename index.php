@@ -6,11 +6,18 @@ require_once 'backend/pagina_publica.php';
 require_once 'backend/chat_busqueda.php'; // chatDisponibilidad(): misma etiqueta de stock que el asistente
 
 // Filtros de la URL: solo texto (un ?q[]=x rompía htmlspecialchars en PHP 8).
-foreach (['q', 'modelo', 'categoria'] as $filtro) {
+foreach (['q', 'modelo', 'categoria', 'orden', 'disponible', 'precio_min', 'precio_max'] as $filtro) {
     if (isset($_GET[$filtro]) && !is_string($_GET[$filtro])) {
         unset($_GET[$filtro]);
     }
 }
+
+// Filtros y orden del listado (F4-4, E2-H8, RF-015): solo valores conocidos o números enteros.
+$ordenesListado = ['' => 'Más relevantes', 'precio_asc' => 'Precio: menor a mayor', 'precio_desc' => 'Precio: mayor a menor', 'nombre' => 'Nombre (A-Z)'];
+$ordenElegido = isset($ordenesListado[$_GET['orden'] ?? '']) ? (string)($_GET['orden'] ?? '') : '';
+$soloDisponibles = !empty($_GET['disponible']);
+$precioMin = isset($_GET['precio_min']) && ctype_digit($_GET['precio_min']) ? (int)$_GET['precio_min'] : null;
+$precioMax = isset($_GET['precio_max']) && ctype_digit($_GET['precio_max']) ? (int)$_GET['precio_max'] : null;
 
 $productos = [];
 $porPagina = 24;
@@ -55,7 +62,10 @@ if (isset($conexion) && !$conexion->connect_error) {
         $orden = 'p.categoria, p.nombre';
 
         if (!empty($_GET['modelo'])) {
-            $where[] = gmgCondicionModelo($conexion, $_GET['modelo'], 'p.id');
+            [$condicionModelo, $tiposModelo, $paramsModelo] = gmgCondicionModelo($_GET['modelo'], 'p.id');
+            $where[] = $condicionModelo;
+            $tipos .= $tiposModelo;
+            $params = array_merge($params, $paramsModelo);
         }
         if (!empty($_GET['categoria'])) {
             $where[] = "p.categoria = ?";
@@ -68,6 +78,20 @@ if (isset($conexion) && !$conexion->connect_error) {
             $where[] = $busqueda['condicion'];
             $tipos .= $busqueda['tipos'];
             $params = array_merge($params, $busqueda['params']);
+        }
+
+        if ($soloDisponibles) {
+            $where[] = "p.stock > 0";
+        }
+        if ($precioMin !== null) {
+            $where[] = "p.precio >= ?";
+            $tipos .= 'i';
+            $params[] = $precioMin;
+        }
+        if ($precioMax !== null) {
+            $where[] = "p.precio <= ?";
+            $tipos .= 'i';
+            $params[] = $precioMax;
         }
 
         $condicion = " WHERE " . implode(" AND ", $where);
@@ -92,7 +116,10 @@ if (isset($conexion) && !$conexion->connect_error) {
         $paginaActual = min($paginaActual, $totalPaginas);
 
         $sql .= $condicion;
-        if ($busqueda) {
+        $ordenesSql = ['precio_asc' => 'p.precio ASC, p.nombre', 'precio_desc' => 'p.precio DESC, p.nombre', 'nombre' => 'p.nombre ASC'];
+        if ($ordenElegido !== '') {
+            $sql .= " ORDER BY " . $ordenesSql[$ordenElegido]; // orden elegido por el cliente (F4-4)
+        } elseif ($busqueda) {
             // Lo más parecido primero (SKU exacto, palabras en el nombre); los parámetros del orden van después.
             $sql .= " ORDER BY " . $busqueda['orden'] . ", (p.stock > 0) DESC, " . $orden;
             $tipos .= $busqueda['tipos_orden'];
@@ -105,13 +132,16 @@ if (isset($conexion) && !$conexion->connect_error) {
         $params[] = ($paginaActual - 1) * $porPagina;
 
         $productos = $totalProductos > 0 ? $consultar($sql, $tipos, $params) : [];
+        if ($totalProductos === 0 && !empty($_GET['q'])) {
+            gmgRegistrarBusquedaSinResultado($conexion, $_GET['q'], $_GET['modelo'] ?? '', $_GET['categoria'] ?? ''); // F3-10
+        }
     }
 }
 
 /** Dirección de una página del listado, con los mismos filtros (la página 1 va sin "pagina"). */
 function gmgEnlacePagina($numero) {
     $filtros = [];
-    foreach (['modelo', 'categoria', 'q'] as $filtro) {
+    foreach (['modelo', 'categoria', 'q', 'orden', 'disponible', 'precio_min', 'precio_max'] as $filtro) {
         if (!empty($_GET[$filtro])) {
             $filtros[$filtro] = $_GET[$filtro];
         }
@@ -139,7 +169,7 @@ if ($modeloCanonico !== '') {
         $tituloPagina = 'Repuestos para Suzuki ' . $modeloCanonico . ' (página ' . $paginaActual . ') - GMG Repuestos';
     }
 }
-$esBusquedaFiltrada = !empty($_GET['q']) || !empty($_GET['categoria']);
+$esBusquedaFiltrada = !empty($_GET['q']) || !empty($_GET['categoria']) || $ordenElegido !== '' || $soloDisponibles || $precioMin !== null || $precioMax !== null;
 
 gmgCabeceraPublica([
     'titulo_completo' => $tituloPagina,
@@ -159,16 +189,19 @@ gmgCabeceraPublica([
         <div class="container">
             <form action="index.php" method="GET" class="search-form" id="searchForm" autocomplete="off">
                 <div class="search-input-wrap">
+                    <label for="searchInput" class="sr-only">Buscar repuesto por nombre o SKU</label>
                     <input type="text" name="q" id="searchInput" placeholder="Buscar por nombre o código SKU (ej: FRE-SWI3-PDL)" value="<?php echo isset($_GET['q']) ? htmlspecialchars($_GET['q']) : ''; ?>">
                     <div id="searchSugerencias" class="search-sugerencias"></div>
                 </div>
-                <select name="modelo">
+                <label for="filtroModelo" class="sr-only">Modelo</label>
+                <select name="modelo" id="filtroModelo">
                     <option value="">Todos los modelos</option>
                     <?php foreach ($modelosInfo as $mi): ?>
                         <option value="<?php echo htmlspecialchars($mi['corto']); ?>" <?php echo (isset($_GET['modelo']) && $_GET['modelo'] == $mi['corto']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($mi['completo']); ?></option>
                     <?php endforeach; ?>
                 </select>
-                <select name="categoria">
+                <label for="filtroCategoria" class="sr-only">Categoría</label>
+                <select name="categoria" id="filtroCategoria">
                     <option value="">Todas las categorías</option>
                     <?php foreach ($categoriasDisponibles as $categoriaOpcion): ?>
                         <option value="<?php echo htmlspecialchars($categoriaOpcion); ?>" <?php echo (isset($_GET['categoria']) && $_GET['categoria'] === $categoriaOpcion) ? 'selected' : ''; ?>><?php echo htmlspecialchars($categoriaOpcion); ?></option>
@@ -205,9 +238,9 @@ gmgCabeceraPublica([
                     </div>
                 </div>
                 <div class="hero-dots">
-                    <button type="button" class="hero-dot is-active" data-hero-index="0" aria-label="Slide 1"></button>
-                    <button type="button" class="hero-dot" data-hero-index="1" aria-label="Slide 2"></button>
-                    <button type="button" class="hero-dot" data-hero-index="2" aria-label="Slide 3"></button>
+                    <button type="button" class="hero-dot is-active" data-hero-index="0" aria-label="Mostrar mensaje 1"></button>
+                    <button type="button" class="hero-dot" data-hero-index="1" aria-label="Mostrar mensaje 2"></button>
+                    <button type="button" class="hero-dot" data-hero-index="2" aria-label="Mostrar mensaje 3"></button>
                 </div>
             </section>
 
@@ -277,6 +310,39 @@ gmgCabeceraPublica([
                 }
             ?>
             <h2 id="listado"><?php echo $tituloCatálogo; ?></h2>
+
+            <!-- Filtros y orden (F4-4, E2-H8, RF-015): conservan modelo, categoría y búsqueda -->
+            <form class="listado-filtros" method="GET" action="index.php#listado">
+                <?php foreach (['modelo', 'categoria', 'q'] as $filtroOculto): ?>
+                    <?php if (!empty($_GET[$filtroOculto])): ?>
+                        <input type="hidden" name="<?php echo $filtroOculto; ?>" value="<?php echo gmgH($_GET[$filtroOculto]); ?>">
+                    <?php endif; ?>
+                <?php endforeach; ?>
+                <label class="listado-filtro">
+                    <span>Ordenar</span>
+                    <select name="orden">
+                        <?php foreach ($ordenesListado as $valorOrden => $textoOrden): ?>
+                            <option value="<?php echo gmgH($valorOrden); ?>" <?php echo $valorOrden === $ordenElegido ? 'selected' : ''; ?>><?php echo gmgH($textoOrden); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label class="listado-filtro">
+                    <span>Precio desde</span>
+                    <input type="number" name="precio_min" min="0" step="1000" inputmode="numeric" placeholder="$ mín." value="<?php echo $precioMin !== null ? $precioMin : ''; ?>">
+                </label>
+                <label class="listado-filtro">
+                    <span>Hasta</span>
+                    <input type="number" name="precio_max" min="0" step="1000" inputmode="numeric" placeholder="$ máx." value="<?php echo $precioMax !== null ? $precioMax : ''; ?>">
+                </label>
+                <label class="listado-filtro listado-filtro-check">
+                    <input type="checkbox" name="disponible" value="1" <?php echo $soloDisponibles ? 'checked' : ''; ?>>
+                    <span>Solo con stock</span>
+                </label>
+                <button type="submit" class="listado-filtros-aplicar">Aplicar</button>
+                <?php if ($ordenElegido !== '' || $soloDisponibles || $precioMin !== null || $precioMax !== null): ?>
+                    <a class="listado-filtros-limpiar" href="<?php echo gmgH('index.php?' . http_build_query(array_filter(['modelo' => $_GET['modelo'] ?? '', 'categoria' => $_GET['categoria'] ?? '', 'q' => $_GET['q'] ?? '']))); ?>#listado">Quitar filtros</a>
+                <?php endif; ?>
+            </form>
 
             <?php if (count($productos) > 0): ?>
                 <?php $desde = ($paginaActual - 1) * $porPagina + 1; ?>
@@ -357,6 +423,7 @@ gmgCabeceraPublica([
                                 </button>
                                 <?php endif; ?>
                             </div>
+                            <?php if ($agotado) { gmgFormularioAvisoStock($producto['id']); } // aviso de reposición (F3-11) ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -392,10 +459,37 @@ gmgCabeceraPublica([
                     </nav>
                 <?php endif; ?>
             <?php else: ?>
+                <?php
+                    // Sin resultados (F3-10): alternativas, asistente y WhatsApp con lo que buscó.
+                    $buscado = (string)($_GET['q'] ?? '');
+                    $alternativas = [];
+                    if ($buscado !== '' && (!empty($_GET['modelo']) || !empty($_GET['categoria']))) {
+                        $alternativas['index.php?' . http_build_query(['q' => $buscado])] = 'Buscar "' . $buscado . '" en todos los modelos y categorías';
+                    }
+                    if (!empty($_GET['modelo'])) {
+                        $alternativas['index.php?' . http_build_query(['modelo' => $_GET['modelo']])] = 'Ver todos los repuestos para Suzuki ' . gmgModeloCorto((string)$_GET['modelo']);
+                    }
+                    foreach (array_slice($categoriasDisponibles, 0, 6) as $categoriaAlternativa) {
+                        $alternativas['index.php?' . http_build_query(array_filter(['modelo' => $_GET['modelo'] ?? '', 'categoria' => $categoriaAlternativa]))] = $categoriaAlternativa;
+                    }
+                    $mensajeWhatsApp = 'Hola, busqué ' . ($buscado !== '' ? '"' . $buscado . '"' : 'un repuesto')
+                        . (!empty($_GET['modelo']) ? ' para mi Suzuki ' . gmgModeloCorto((string)$_GET['modelo']) : '') . ' en la página y no lo encontré. ¿Lo tienen?';
+                ?>
                 <div class="sin-resultados" role="status">
-                    <p>No encontramos repuestos para tu búsqueda<?php echo !empty($_GET['modelo']) ? ' en el modelo ' . htmlspecialchars($_GET['modelo']) : ''; ?>.</p>
-                    <p>Puedes consultarle a nuestro Asistente Virtual: te ayuda a encontrar la pieza correcta, incluso con una foto.</p>
-                    <button type="button" class="gmg-chat-promo-btn" data-abrir-chat>Consultar al Asistente</button>
+                    <p>No encontramos repuestos para tu búsqueda<?php echo !empty($_GET['modelo']) ? ' en el modelo ' . gmgH($_GET['modelo']) : ''; ?>.</p>
+                    <?php if ($alternativas): ?>
+                        <p class="sin-resultados-sub">Prueba con:</p>
+                        <ul class="sin-resultados-alternativas">
+                            <?php foreach ($alternativas as $urlAlternativa => $textoAlternativa): ?>
+                                <li><a href="<?php echo gmgH($urlAlternativa); ?>"><?php echo gmgH($textoAlternativa); ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                    <p>O pregúntale a nuestro Asistente Virtual (te ayuda incluso con una foto), o escríbenos y lo buscamos por ti.</p>
+                    <div class="sin-resultados-acciones">
+                        <button type="button" class="gmg-chat-promo-btn" data-abrir-chat data-chat-pregunta="<?php echo gmgH($buscado !== '' ? 'Busco ' . $buscado . (!empty($_GET['modelo']) ? ' para mi Suzuki ' . gmgModeloCorto((string)$_GET['modelo']) : '') : ''); ?>">Consultar al Asistente</button>
+                        <a class="btn-sin-resultados-wa" href="<?php echo gmgH(gmgEnlaceWhatsApp($mensajeWhatsApp)); ?>" target="_blank" rel="noopener">Preguntar por WhatsApp</a>
+                    </div>
                 </div>
             <?php endif; ?>
 
@@ -409,4 +503,6 @@ gmgCabeceraPublica([
 gmgPiePublico($conexion, [
     'modelos' => ['modelosInfo' => $modelosInfo, 'modelosCortosTexto' => $modelosCortosTexto],
     'scripts' => ['js/tienda.js', 'js/model-carousel.js'],
+    // Botón de WhatsApp con el modelo que está mirando el cliente (F3-6).
+    'whatsapp' => $modeloCanonico !== '' ? 'Hola, busco un repuesto para mi Suzuki ' . $modeloCanonico : null,
 ]);

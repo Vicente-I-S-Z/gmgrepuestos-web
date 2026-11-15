@@ -31,6 +31,25 @@ Options -Indexes
     # 3) Carpetas internas que nunca deben abrirse desde internet (no se suben
     #    al hosting, pero si alguna llega por error queda bloqueada igual).
     RewriteRule ^(BD_v2|docs|arquitectura|tests|\.claude|\.git|backend/parciales)(/|$) - [F,L,NC]
+
+    # Mapa del sitio para buscadores (F4-1): /sitemap.xml lo arma sitemap.php.
+    RewriteRule ^sitemap\.xml$ sitemap.php [L]
+</IfModule>
+
+# 5) Rendimiento (F4-7): compresión y caché del navegador. El CSS y el JS llevan ?v=<fecha del
+#    archivo>, así que pueden guardarse un año: al cambiar el archivo cambia la dirección.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript application/json application/xml image/svg+xml text/plain
+</IfModule>
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
 </IfModule>
 
 # 2) Cabeceras de seguridad. (El sitio también las envía desde PHP; si ya

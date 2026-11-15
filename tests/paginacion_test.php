@@ -95,7 +95,7 @@ try {
     revisar(count($chico['ids']) === $frenosSwift && $chico['xp']->query("//nav[@class='paginacion']")->length === 0 && $chico['resumen'] === ($frenosSwift === 1 ? '1 repuesto' : "$frenosSwift repuestos"),
             "un listado de $frenosSwift repuestos no muestra paginación", $chico['resumen']);
     $vacio = pagina($s, 'q=zzzznoexiste&pagina=3');
-    revisar($vacio['codigo'] === 200 && $vacio['ids'] === [] && $vacio['xp']->query("//div[contains(@class,'sin-resultados')]")->length === 1, 'sin resultados (aunque pida la página 3): mensaje de sin resultados');
+    revisar($vacio['codigo'] === 200 && $vacio['ids'] === [] && $vacio['xp']->query("//div[@class='sin-resultados']")->length === 1, 'sin resultados (aunque pida la página 3): mensaje de sin resultados');
 
     echo "\n== Navegador a 360 px ==\n";
     if (!navegadorRuta()) {

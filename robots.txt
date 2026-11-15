@@ -1,0 +1,12 @@
+# GMG Repuestos (F4-1, E8-H2, RF-067)
+User-agent: *
+Disallow: /admin/
+Disallow: /backend/
+Disallow: /checkout.php
+Disallow: /login.php
+Disallow: /mercadopago_return.php
+Disallow: /mi-pedido.php
+Disallow: /*?q=
+Disallow: /*&q=
+
+Sitemap: https://gmgrepuestos.cl/sitemap.xml

@@ -176,6 +176,54 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // =========================================================
+    // Aviso de reposición en la tarjeta y la ficha (F3-11, E2-H9, RF-016)
+    // =========================================================
+    document.addEventListener('submit', async (evento) => {
+        const form = evento.target.closest('form.aviso-stock');
+        if (!form) return;
+        evento.preventDefault();
+        const input = form.querySelector('input[name="contacto"]');
+        const boton = form.querySelector('button[type="submit"]');
+        const mensaje = form.querySelector('.aviso-stock-msg');
+        const contacto = input.value.trim();
+        const digitos = contacto.replace(/\D/g, '');
+        const esCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contacto);
+        const esCelular = /^(56)?9\d{8}$/.test(digitos);
+        mensaje.classList.remove('is-error', 'is-ok');
+        if (!esCorreo && !esCelular) {
+            mensaje.textContent = 'Escribe un correo o un celular chileno (por ejemplo +56 9 1234 5678).';
+            mensaje.classList.add('is-error');
+            input.focus();
+            return;
+        }
+        let sesionId = '';
+        try { sesionId = localStorage.getItem('gmg_chat_sesion_id') || ''; } catch (e) { /* sin localStorage */ }
+        boton.disabled = true;
+        mensaje.textContent = 'Enviando...';
+        try {
+            const resp = await fetch('backend/registrar_aviso_stock.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ producto_id: parseInt(form.dataset.productoId, 10), contacto: contacto, sesion_id: sesionId })
+            });
+            const data = await resp.json();
+            mensaje.textContent = data.mensaje || 'No se pudo registrar el aviso. Intenta de nuevo.';
+            if (data.status === 'success') {
+                mensaje.classList.add('is-ok');
+                input.value = '';
+                input.disabled = true;
+            } else {
+                mensaje.classList.add('is-error');
+                boton.disabled = false;
+            }
+        } catch (e) {
+            mensaje.textContent = 'No pudimos registrar el aviso en este momento. Inténtalo de nuevo o escríbenos por WhatsApp.';
+            mensaje.classList.add('is-error');
+            boton.disabled = false;
+        }
+    });
+
+    // =========================================================
     // Mini carrusel de imágenes en cada tarjeta de producto
     // (solo aparece si el producto tiene más de una foto cargada)
     // =========================================================

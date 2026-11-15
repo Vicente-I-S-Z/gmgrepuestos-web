@@ -1,7 +1,7 @@
 # Bloquea el acceso directo por navegador a los archivos de configuración
 # y lógica interna del backend. Solo pueden ser cargados internamente
 # mediante require/require_once desde otros scripts PHP del sitio.
-<FilesMatch "^(bot_config|config|auth|chat_helpers|chat_busqueda|email_config|email_helpers|SmtpMailer|modelos|datos|entorno|seguridad|conocimiento|pagina_publica|auditoria|pagos|admin_ui|pedido_estado)\.php$">
+<FilesMatch "^(bot_config|config|auth|chat_helpers|chat_busqueda|email_config|email_helpers|SmtpMailer|modelos|datos|entorno|seguridad|conocimiento|pagina_publica|auditoria|pagos|admin_ui|pedido_estado|fotos|limpiar_chat)\.php$">
     Require all denied
 </FilesMatch>
 
@@ -9,7 +9,7 @@
 # si acaso el hosting corre una versión antigua donde "Require all denied"
 # no aplica):
 <IfModule !mod_authz_core.c>
-    <FilesMatch "^(bot_config|config|auth|chat_helpers|chat_busqueda|email_config|email_helpers|SmtpMailer|modelos|datos|entorno|seguridad|conocimiento|pagina_publica|auditoria|pagos|admin_ui|pedido_estado)\.php$">
+    <FilesMatch "^(bot_config|config|auth|chat_helpers|chat_busqueda|email_config|email_helpers|SmtpMailer|modelos|datos|entorno|seguridad|conocimiento|pagina_publica|auditoria|pagos|admin_ui|pedido_estado|fotos|limpiar_chat)\.php$">
         Order allow,deny
         Deny from all
     </FilesMatch>

@@ -5,8 +5,8 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once 'config.php';
 
-$categoria = trim($_GET['categoria'] ?? '');
-$excluirIds = isset($_GET['excluir']) ? array_filter(array_map('intval', explode(',', $_GET['excluir']))) : [];
+$categoria = isset($_GET['categoria']) && is_string($_GET['categoria']) ? trim($_GET['categoria']) : '';
+$excluirIds = isset($_GET['excluir']) && is_string($_GET['excluir']) ? array_filter(array_map('intval', explode(',', $_GET['excluir']))) : [];
 
 $selectBase = "SELECT r.id_repuesto AS id, r.nombre, r.precio, r.sku,
                       COALESCE((SELECT i.url FROM repuesto_imagenes i
@@ -31,16 +31,23 @@ function relacionadosLeer($resultado) {
     return $lista;
 }
 
+// Sentencia preparada (F3-4, RNF-030); los ids ya son enteros.
 $where = ["r.activo = 1"];
 if ($categoria !== '') {
-    $where[] = "c.nombre = '" . $conexion->real_escape_string($categoria) . "'";
+    $where[] = "c.nombre = ?";
 }
 if (count($excluirIds) > 0) {
-    $where[] = "r.id_repuesto NOT IN (" . implode(',', $excluirIds) . ")";
+    $where[] = "r.id_repuesto NOT IN (" . implode(',', array_map('intval', $excluirIds)) . ")";
 }
 
 $sql = $selectBase . " WHERE " . implode(" AND ", $where) . " ORDER BY RAND() LIMIT 4";
-$productos = relacionadosLeer($conexion->query($sql));
+$stmt = $conexion->prepare($sql);
+if ($categoria !== '') {
+    $stmt->bind_param('s', $categoria);
+}
+$stmt->execute();
+$productos = relacionadosLeer($stmt->get_result());
+$stmt->close();
 
 // Si no hay suficientes productos de la misma categoría, completar con otros al azar
 if (count($productos) < 4) {

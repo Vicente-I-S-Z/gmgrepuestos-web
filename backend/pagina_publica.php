@@ -22,6 +22,22 @@ function gmgH($texto) {
     return htmlspecialchars((string)$texto, ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * Formulario "Avísame cuando llegue" para un repuesto sin stock (F3-11, E2-H9, RF-016).
+ * Lo atiende js/tienda.js y lo guarda backend/registrar_aviso_stock.php (el mismo del chat).
+ * $plegado: en las tarjetas del listado va dentro de un <details> para no ocupar espacio.
+ */
+function gmgFormularioAvisoStock($idProducto, $plegado = true) {
+    $id = (int)$idProducto;
+    $formulario = '<form class="aviso-stock" data-producto-id="' . $id . '" novalidate>'
+        . '<label for="aviso-' . $id . '">Te avisamos apenas vuelva a haber stock</label>'
+        . '<div class="aviso-stock-fila"><input id="aviso-' . $id . '" type="text" name="contacto" maxlength="150" required'
+        . ' placeholder="Correo o celular (+56 9...)" autocomplete="email">'
+        . '<button type="submit">Avisarme</button></div>'
+        . '<p class="aviso-stock-msg" role="status" aria-live="polite"></p></form>';
+    echo $plegado ? '<details class="aviso-stock-plegado"><summary>🔔 Avísame cuando llegue</summary>' . $formulario . '</details>' : $formulario;
+}
+
 /** Fecha en formato chileno dd-mm-aaaa (historia E10-H14). */
 function gmgFechaChile($fecha = null) {
     $marca = $fecha === null ? time() : (is_numeric($fecha) ? (int)$fecha : strtotime($fecha));
@@ -105,6 +121,9 @@ function gmgCabeceraPublica(array $o = []) {
 <?php if (!empty($o['json_ld'])): ?>
     <script type="application/ld+json"><?php echo json_encode($o['json_ld'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP); ?></script>
 <?php endif; ?>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap">
 <?php foreach ($css as $hoja): ?>
     <link rel="stylesheet" href="<?php echo gmgH($hoja); ?>?v=<?php echo gmgVersionArchivo($hoja); ?>">
 <?php endforeach; ?>
@@ -137,6 +156,7 @@ function gmgCabeceraPublica(array $o = []) {
  * $conexion        Conexión a la base de datos (para modelos y datos de contacto).
  * $o['scripts']    Scripts adicionales de la página (arreglo de rutas).
  * $o['modelos']    Resultado de gmgDatosModelosPublicos() si la página ya lo calculó.
+ * $o['whatsapp']   Mensaje inicial del botón flotante de WhatsApp (F3-6), según la página.
  */
 function gmgPiePublico($conexion, array $o = []) {
     $datos = $o['modelos'] ?? gmgDatosModelosPublicos($conexion);
@@ -199,6 +219,8 @@ function gmgPiePublico($conexion, array $o = []) {
     </footer>
 
 <?php
+    $whatsappMensaje = $o['whatsapp'] ?? null;
+    $bienvenidaChat = $contacto['bienvenida'] ?? ''; // F3-8: editable en el panel "Asistente"
     require __DIR__ . '/parciales/widgets_tienda.php';
 
     $scripts = array_merge(['js/cart.js', 'js/chat.js'], $o['scripts'] ?? []);

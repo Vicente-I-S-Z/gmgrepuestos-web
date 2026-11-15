@@ -46,6 +46,10 @@ Fecha de término del proyecto: 18-12-2026.
 - Buscador y sugerencias de la tienda (F2-5: CP-03 a CP-06, con Edge; deja la base como estaba): `php tests/buscador_test.php`
 - Paginación del listado de a 24 (F2-6, con Edge a 360 px): `php tests/paginacion_test.php`
 - Teléfono chileno en servidor, `cart.js` (con Node) y checkout (F2-7): `php tests/telefono_test.php`
+- Panel de productos: fotos subidas, edición rápida, CP-40, CP-41 y CP-46 (F2-8; borra los archivos de prueba al final): `php tests/panel_productos_test.php`
+- Fase 3 y 4 (todas terminan en "TODO OK"): `login_seguro_test` (F3-1), `limites_ip_test` (F3-3), `sql_preparado_test` (F3-4), `csp_test` (F3-5, Edge), `whatsapp_test` (F3-6, Edge), `privacidad_chat_test` (F3-7), `config_chatbot_test` (F3-8), `reposicion_test` (F3-9), `busquedas_vacias_test` (F3-10), `aviso_stock_test` (F3-11, Edge), `seo_test` (F4-1), `filtros_test` (F4-4), `accesibilidad_test` (F4-8, Edge): `php tests/<nombre>.php`
+- Paquete para Hostinger: `dist/subida_final/` (se rearma copiando todo menos `.claude`, `CLAUDE.md`, `docs`, `BD_v2`, `arquitectura`, `tests`, `.git`, `.env*`, `.git*` y `dist`); guía en `docs/PENDIENTES_VICENTE.md`, punto 20
+- `cp42_csrf_panel.sh` necesita `mysql` en el PATH: `export PATH="/c/xampp/php:/c/xampp/mysql/bin:$PATH"` antes de correrlo
 - Ver una página a 360 px reales con Edge sin ventana (no baja de unos 500 px): abrir `/tests/vista_ancho.html?ancho=360&url=/index.php%3Fq%3Dfiltro` y sacar la captura
 - Asistente con la IA REAL (gasta la clave del `.env` local; pedir permiso a Vicente antes): `php tests/chat_ia_real_test.php --confirmo-gasto` (informe en `docs/evidencias/resultados_F1-9.md`)
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).

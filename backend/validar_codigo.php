@@ -6,9 +6,15 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once 'config.php';
 
+// Límite por IP (F3-3, RNF-035): evita probar códigos a ciegas.
+if (gmgLimiteSuperado($conexion, 'codigo', 10, 60)) {
+    echo json_encode(['valido' => false, 'mensaje' => 'Hiciste muchos intentos. Espera un minuto y vuelve a probar.']);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
-$codigo = trim($input['codigo'] ?? '');
-$subtotal = (float)($input['subtotal'] ?? 0);
+$codigo = isset($input['codigo']) && is_string($input['codigo']) ? trim(mb_substr($input['codigo'], 0, 40)) : '';
+$subtotal = isset($input['subtotal']) && is_numeric($input['subtotal']) ? (float)$input['subtotal'] : 0;
 
 if ($codigo === '' || $subtotal <= 0) {
     echo json_encode(['valido' => false, 'mensaje' => 'Ingresa un código válido.']);

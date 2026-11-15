@@ -357,6 +357,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const habilitado = seleccionados.length > 0;
         btnCheckout.disabled = !habilitado;
         btnCheckout.style.opacity = habilitado ? '1' : '0.5';
+        actualizarWhatsappCarrito(seleccionados, total);
+    }
+
+    // "Finalizar por WhatsApp" (F3-6, E3-H11, RF-029): el pedido armado con productos, cantidades y total.
+    function actualizarWhatsappCarrito(items, total) {
+        const btnWhatsappCarrito = document.getElementById('btn-whatsapp-carrito');
+        if (!btnWhatsappCarrito) return;
+        const base = btnWhatsappCarrito.href.split('?')[0];
+        const lineas = items.map(i => '- ' + i.quantity + ' x ' + i.nombre + ': $' + (i.precio * i.quantity).toLocaleString('es-CL'));
+        const texto = 'Hola, quiero comprar estos repuestos:\n' + lineas.join('\n') + '\nTotal: $' + total.toLocaleString('es-CL') + ' CLP'
+            + (promoAplicado ? ' (con el código ' + promoAplicado.codigo + ')' : '');
+        btnWhatsappCarrito.href = base + '?text=' + encodeURIComponent(texto);
+        btnWhatsappCarrito.hidden = items.length === 0;
     }
 
     // --- Seleccionar todos ---

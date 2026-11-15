@@ -222,6 +222,8 @@ Cambio del 15-11: el chat nuevo ya pasó la prueba con la IA real en local (punt
 
 ## 17. Subir la Fase 1 a Hostinger (asistente IA nuevo)
 
+**Reemplazado por el punto 20 (subida completa del 15-11).** Lo de abajo queda como referencia; no lo hagas por separado.
+
 Probado en local con la IA real el 15-11: 39 de 39 casos correctos, producto correcto en el top 3 en el 100%, 0 precios o SKU inventados, p90 de 3,9 s (`docs/evidencias/resultados_F1-9.md`).
 Archivos listos en `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_fase1\` (9, idénticos al proyecto). **No hay SQL que ejecutar** (`limites_solicitudes` ya existe en producción). Mismo método seguro de la Fase 0: archivos sueltos por carpeta, nunca "Extraer".
 
@@ -262,8 +264,58 @@ Claude Code armó el ambiente local el 15-11 (parte D de `docs/OTRO_COMPUTADOR.m
 
 ## 19. Ejecutar `BD_v2/07_stock_descontado.sql` en producción (F2-3, antes de subir la Fase 2)
 
+**Incluido en el punto 20 (paso B).**
+
 Agrega la columna `pedidos.stock_descontado_en`. Sin ella, el panel nuevo no puede cambiar el estado de los pedidos (muestra "No se pudo actualizar el estado." y no cambia nada). Súbelo **junto con** la Fase 2, no antes ni mucho después.
 
 - [ ] 1. hPanel > Bases de datos > phpMyAdmin > la base del sitio > pestaña SQL.
 - [ ] 2. Pega el contenido completo de `BD_v2/07_stock_descontado.sql` y presiona Continuar. Debe terminar sin errores. Se puede repetir sin problema.
 - [ ] 3. Revisa: `SHOW COLUMNS FROM pedidos LIKE 'stock_descontado_en';` muestra una fila.
+
+## 20. SUBIDA COMPLETA A HOSTINGER (15-11, para la presentación)
+
+Todo el código de las Fases 0 a 4 (lo hecho hasta hoy) en **una sola subida**: `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_final\` (127 archivos, 3,3 MB, sin `.env`, `docs/`, `tests/` ni nada interno). Probado en local: 49 PHP sin errores, 15 rutas en orden y log vacío. Tiempo estimado: 30 a 40 minutos.
+
+**Regla de oro (incidente del 14-11):** nunca subas un zip y uses "Extraer". Se suben los archivos sueltos, una carpeta a la vez, aceptando reemplazar.
+
+**A. Respaldo (para poder volver atrás)**
+
+- [ ] 1. hPanel > Administrador de archivos > `public_html` > selecciona todo > Descargar (zip). Guárdalo en Descargas como `respaldo_public_html_15-11.zip`.
+- [ ] 2. hPanel > Bases de datos > phpMyAdmin > la base del sitio > Exportar > Rápido > Continuar. Guárdalo como `respaldo_bd_15-11.sql`.
+
+**B. Base de datos (antes de subir los archivos)**
+
+- [ ] 1. phpMyAdmin > la base del sitio > pestaña Importar > `BD_v2\07_stock_descontado.sql` > Importar. Debe terminar en verde.
+- [ ] 2. Lo mismo con `BD_v2\08_busquedas_sin_resultado.sql`.
+- [ ] 3. Pestaña SQL: `SHOW COLUMNS FROM pedidos LIKE 'stock_descontado_en'; SHOW TABLES LIKE 'busquedas_sin_resultado';` deben salir 1 fila cada una.
+- [ ] 4. Stock real (punto 13): `SELECT COUNT(*), SUM(stock > 0) FROM repuestos WHERE activo = 1;`. **Si el segundo número es 0, todo aparecerá "Sin stock" y nadie podrá comprar.** Para la demo, carga stock (en el panel Productos ahora se edita directo en el listado).
+
+**C. Revisar el `.env` de producción** (Administrador de archivos > `domains/gmgrepuestos.cl/.env` > Editar, solo mirar)
+
+- [ ] 1. `APP_ENV=produccion`, `AI_API_KEY` con la clave nueva y `WHATSAPP_NUMBER` con el número real (569XXXXXXXX). El número también se puede poner ahora en el panel > Asistente > "WhatsApp de la tienda".
+
+**D. Subir los archivos** (desde `dist\subida_final\`, carpeta por carpeta, "Subir" y aceptar reemplazar)
+
+- [ ] 1. `public_html/backend`: los **27** archivos de `subida_final\backend\` en una sola subida (incluye `.htaccess`; si no lo ves, activa "Mostrar archivos ocultos"). Van juntos porque se usan entre sí.
+- [ ] 2. `public_html/backend/parciales`: los 2 de `subida_final\backend\parciales\`.
+- [ ] 3. `public_html/css`: los 4. `public_html/js`: los 4.
+- [ ] 4. `public_html/admin`: los 8.
+- [ ] 5. `public_html/img`: los 31 (fotos de modelos, ahora también en WebP). `public_html/img/repuestos`: los 35.
+- [ ] 6. `public_html` (raíz): los **16** archivos sueltos de `subida_final\` (incluye `.htaccess` y los nuevos `robots.txt`, `sitemap.php` y `producto.php`).
+- [ ] 7. Permisos: clic derecho en `public_html/img/repuestos` > Permisos > 755 (para que el panel pueda guardar fotos).
+
+**E. Probar en el sitio real** (Ctrl+F5 para recargar sin caché)
+
+- [ ] 1. https://gmgrepuestos.cl carga; entra a un modelo: hay filtros, paginación de 24 y botón verde de WhatsApp abajo a la izquierda.
+- [ ] 2. Abre un repuesto (clic en su nombre): se ve la ficha con fotos, compatibilidad y "Preguntar al asistente".
+- [ ] 3. Busca "terminal swift": aparecen los terminales del Swift.
+- [ ] 4. Abre el chat: aparece el aviso de privacidad. Escribe "pastillas de freno para Swift 2019": responde con tarjetas.
+- [ ] 5. /admin: inicia sesión. En Productos cambia el stock de uno desde el listado y presiona Guardar.
+- [ ] 6. https://gmgrepuestos.cl/sitemap.xml muestra la lista de páginas.
+- [ ] 7. Escríbele a Claude Code "subido": revisa desde afuera las cabeceras, los bloqueos (CP-47 en producción) y que todo responda.
+
+**F. Tarea programada (borrar chats de más de 12 meses, F3-7)**
+
+- [ ] 1. hPanel > Avanzado > Trabajos Cron > Crear: tipo PHP, comando `/home/USUARIO/public_html/backend/limpiar_chat.php` (USUARIO aparece en la ruta del Administrador de archivos), una vez al día a las 04:00.
+
+**Si algo falla (vuelta atrás):** vuelve a subir, carpeta por carpeta, los archivos del zip del paso A.1 (descomprímelo primero en tu PC). La base no necesita volver atrás: los scripts 07 y 08 solo agregan una columna y una tabla, y el código antiguo las ignora.
