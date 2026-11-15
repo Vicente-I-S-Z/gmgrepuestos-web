@@ -120,7 +120,7 @@ Decisión de Vicente (14-11): no se reordena. Fases 1 y 2 ya las revisó el prof
 
 ## 9. Ejecutar `BD_v2/05_tablas_panel.sql` en producción (F0-3)
 
-Hecho: la exportación del 15-11 muestra `limites_solicitudes` en producción.
+Hecho: la exportación del 14-11 (01:10 hora del servidor) muestra `limites_solicitudes` en producción.
 
 Es seguro: probado en local contra una copia de la estructura de producción. Solo crea la tabla nueva `limites_solicitudes`; las 3 tablas que ya existen y los textos del panel "Asistente" no se tocan.
 
@@ -139,7 +139,7 @@ En producción, horario, dirección ("Av. Providencia 1234"), teléfono ("+56 9 
 
 ## 11. Estructura completa de la base de producción (para cerrar F0-3)
 
-Hecho el 15-11: la única diferencia era `pedidos.metodo_entrega`, que ahora crea `BD_v2/06_metodo_entrega.sql` (en producción no hace falta ejecutarlo).
+Hecho el 14-11: la única diferencia era `pedidos.metodo_entrega`, que ahora crea `BD_v2/06_metodo_entrega.sql` (en producción no hace falta ejecutarlo).
 
 En producción existe la columna `pedidos.metodo_entrega` (la agregó un script 06 que nunca se guardó en `BD_v2/`) y una base nueva no la tiene. Con la estructura completa Claude Code arma el script que falta y revisa si hay más diferencias. No bloquea: Claude Code sigue con F0-5.
 
@@ -147,3 +147,68 @@ En producción existe la columna `pedidos.metodo_entrega` (la agregó un script 
 - [x] 2. Método: "Personalizado". Formato: SQL.
 - [x] 3. En "Tablas", deja todas marcadas, pero solo en la columna "Estructura" (desmarca la columna "Datos"). Así el archivo no trae pedidos, clientes ni contraseñas.
 - [x] 4. Botón "Exportar" (abajo). Adjunta el archivo `.sql` en el chat de Claude Code.
+
+## 12. Subir la Fase 0 a Hostinger (F0-4, F0-5 y F0-6)
+
+**Incidente del 14-11 (no repetir):** se subió `subida_fase0.zip` y se usó "Extraer" en el Administrador de archivos. El resultado fue un `public_html` con solo los 11 archivos del zip y el sitio quedó caído (portada 403, login 500). Vicente lo restauró y Claude Code comprobó desde afuera que la tienda volvió (118 productos del Swift, CSS, JS e imágenes en 200), pero con la versión antigua. **No usar "Extraer" para subidas parciales:** los archivos se suben sueltos, carpeta por carpeta. El zip quedó obsoleto; `dist/sitio_completo.zip` (sitio completo desde el PC) queda solo para emergencias.
+
+Archivos listos en `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_fase0\` (11, idénticos al proyecto). No hay SQL que ejecutar antes.
+
+**A. Quitar de producción lo que no debe estar ahí (`docs/`, `BD_v2/`, `arquitectura/`)**
+
+`arquitectura/` hoy se puede abrir desde internet (`/arquitectura/index.html` responde 200). `docs/` y `BD_v2/` están bloqueadas, pero no pertenecen al sitio.
+
+- [ ] 1. En `public_html`, marca `docs`, `BD_v2` y `arquitectura` > botón Descargar > formato zip. Guarda el zip en Descargas (no dentro del proyecto): es la copia por si algo de ahí hace falta.
+- [ ] 2. Con las 3 marcadas > Eliminar.
+
+**B. Subir los archivos sueltos, carpeta por carpeta (nada de zip)**
+
+- [ ] 1. En `public_html`: botón Subir > elige `dist\subida_fase0\.htaccess` y `dist\subida_fase0\login.php` (los 2 juntos) > acepta reemplazar.
+- [ ] 2. Entra a `admin`: Subir > elige los 5 archivos de `dist\subida_fase0\admin\` > acepta reemplazar.
+- [ ] 3. Entra a `backend`: Subir > elige los 4 archivos de `dist\subida_fase0\backend\` (`.htaccess`, `admin_ui.php`, `entorno.php`, `pagina_publica.php`) **juntos, en una sola subida**: `entorno.php` y `pagina_publica.php` deben quedar de la misma versión.
+- [ ] 4. Revisa los tamaños: `.htaccess` 2.57 KiB, `login.php` 3.14 KiB; en `admin`: `avisos.php` 6.29 KiB, `codigos.php` 10.13 KiB, `index.php` 24.77 KiB, `pedidos.php` 16.91 KiB, `productos.php` 21.73 KiB; en `backend`: `.htaccess` 891 B, `admin_ui.php` 3.34 KiB, `entorno.php` 4.28 KiB, `pagina_publica.php` 8.42 KiB.
+
+**C. Probar en el sitio real**
+
+- [ ] 1. https://gmgrepuestos.cl : la tienda carga con su diseño normal.
+- [ ] 2. https://gmgrepuestos.cl/admin : inicia sesión; el panel se ve con sus estilos.
+- [ ] 3. Panel > Códigos > presiona "Desactivar" en BIENVENIDO10 y luego "Activar": las dos veces debe decir "Estado del código actualizado." (si dice "No se pudo comprobar la seguridad del formulario", avísale a Claude Code).
+- [ ] 4. Escríbele a Claude Code "subido": revisa desde afuera la tienda, la versión de `login.php` y que `/arquitectura/`, `/tests/`, `/docs/`, `/BD_v2/`, `/.git/config` y `/backend/config.php` respondan 403 (CP-47 en producción).
+
+**Si algo falla:** si el sitio no carga después de B.3, vuelve a subir a `backend` los archivos `entorno.php` y `pagina_publica.php` juntos, y avísale a Claude Code.
+
+## 13. Datos reales en producción (F0-7)
+
+- [ ] 1. phpMyAdmin de producción > pestaña SQL:
+  ```sql
+  SELECT COUNT(*) AS activos, SUM(stock > 0) AS con_stock,
+         SUM(codigo_oem IS NOT NULL AND codigo_oem <> '') AS con_oem
+    FROM repuestos WHERE activo = 1;
+  ```
+  Pásale el resultado a Claude Code.
+- [ ] 2. Si `con_stock` es 0 o muy bajo: pídele a GMG una planilla con dos columnas, `sku` y `stock` (y `codigo_oem` si lo tienen). Pásasela a Claude Code: arma el script de actualización y lo prueba en local antes.
+- [ ] 3. Textos reales del asistente: punto 10.
+
+## 14. Instalar las skills del proyecto (F0-8)
+
+Son extensiones de terceros que pide el plan (Ponytail para el backend, Emil Kowalski para la interfaz). Node.js ya está instalado.
+
+- [ ] 1. Ponytail: en Claude Code escribe `/plugin marketplace add DietrichGebert/ponytail` y luego `/plugin install ponytail@ponytail`; elige alcance "proyecto". Si en VS Code `/plugin` no existe (como pasó con `/add-dir`), abre una terminal en la carpeta del proyecto, escribe `claude`, ejecuta ahí los 2 comandos y sal con `/exit`.
+- [ ] 2. Emil Kowalski: en la terminal, en la carpeta del proyecto:
+  ```powershell
+  npx skills@latest add emilkowalski/skills -a claude-code
+  ```
+  Elige `emil-design-eng`, `review-animations`, `improve-animations`, `find-animation-opportunities`, `break-ui` y `mobile-native`.
+- [ ] 3. Verifica: al escribir `/` deben aparecer `/ponytail-help` y `/emil-design-eng`. Luego haz commit de lo que se agregue en `.claude/` (Claude Code te da el bloque).
+
+## 15. Diagnóstico del chat en producción (F1-1) y prueba de la clave nueva (F0-2, C.3)
+
+No bloquea: Claude Code avanza con F1-2 a F1-8 en local.
+
+- [ ] 1. Inicia sesión en https://gmgrepuestos.cl/admin. En la misma ventana abre la tienda, abre el chat y escribe "pastillas de freno para Swift 2019". Copia la respuesta completa (si hay error, trae una línea `[DEBUG]`).
+- [ ] 2. hPanel > Avanzado > Registros de errores: copia las últimas líneas que digan `[GMG Chat]`.
+- [ ] 3. phpMyAdmin > SQL:
+  ```sql
+  SELECT clave, CHAR_LENGTH(contenido) AS largo FROM base_conocimiento;
+  ```
+- [ ] 4. Pásale a Claude Code lo de 1, 2 y 3, y confirma que revocaste la clave antigua de OpenAI (punto 7, C.4).
