@@ -93,6 +93,24 @@ iframe.addEventListener('load', async () => {
     r.avisoTrasEspera = despues.textContent.includes('tardando más de lo normal');
     r.enlaceWhatsApp = (despues.querySelector('a[href^="https://wa.me/"]') || {}).href || '';
 
+    // Fotos adjuntas (F1-8): el navegador avisa antes de enviar si una foto no sirve.
+    const entrada = d.getElementById('gmgChatFileInput');
+    const elegir = archivos => {
+        const dt = new DataTransfer();
+        archivos.forEach(a => dt.items.add(a));
+        entrada.files = dt.files;
+        entrada.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    const vistas = () => d.querySelectorAll('.gmg-chat-preview-item').length;
+    const aviso = () => d.getElementById('gmgChatAviso').textContent;
+    r.acceptFotos = entrada.getAttribute('accept');
+    elegir([new File(['GIF89a'], 'pieza.gif', { type: 'image/gif' })]);
+    r.gifRechazado = vistas() === 0 && aviso().includes('JPG, PNG o WebP de hasta 4 MB');
+    elegir([new File([new Uint8Array(4 * 1024 * 1024 + 1)], 'grande.jpg', { type: 'image/jpeg' })]);
+    r.grandeRechazada = vistas() === 0;
+    elegir([new File([new Uint8Array(2048)], 'pieza.png', { type: 'image/png' })]);
+    r.pngAceptado = vistas() === 1;
+
     r.xss = window.__xss || 0;
     document.getElementById('resultado').textContent = JSON.stringify(r);
 });

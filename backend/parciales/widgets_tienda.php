@@ -64,7 +64,7 @@ $modelosCortosTexto = $modelosCortosTexto ?? 'todos los modelos Suzuki';
         </div>
 
         <div class="gmg-chat-footer">
-            <input type="file" id="gmgChatFileInput" accept="image/*" multiple style="display: none;">
+            <input type="file" id="gmgChatFileInput" accept="image/jpeg,image/png,image/webp" multiple style="display: none;">
             <button type="button" id="gmgChatFileBtn" class="gmg-chat-file-btn" title="Adjuntar hasta 3 fotos de la pieza" aria-label="Adjuntar fotos de la pieza">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>

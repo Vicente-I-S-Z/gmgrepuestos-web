@@ -7,8 +7,9 @@ require_once 'datos.php';
 require_once 'chat_helpers.php';
 require_once 'conocimiento.php';
 
-// 0. Límite de mensajes por sesión (anti-abuso / control de costo de la API)
-if (!chatVerificarLimite()) {
+// 0. Límites anti-abuso y de costo (INC-02, E10-H5): por sesión y por IP (guardada
+//    como hash en limites_solicitudes). Con otra sesión no se salta el límite por IP.
+if (!chatVerificarLimite() || gmgLimiteSuperado($conexion, 'chat', CHAT_RATE_LIMIT_MAX, CHAT_RATE_LIMIT_WINDOW)) {
     echo json_encode([
         'status' => 'error',
         'reply' => 'Estás enviando mensajes muy rápido 🙂. Espera unos segundos y vuelve a intentar.'
@@ -27,45 +28,49 @@ $sesionId = '';
 $atajo = ''; // botón rápido del chat: buscar, despacho o pagos
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['message'])) {
+    // Solo texto: un campo enviado como arreglo (message[]=...) se ignora en vez de romper la página.
+    if (isset($_POST['message']) && is_string($_POST['message'])) {
         $mensaje = trim($_POST['message']);
     }
-    if (isset($_POST['sesion_id'])) {
+    if (isset($_POST['sesion_id']) && is_string($_POST['sesion_id'])) {
         $sesionId = trim($_POST['sesion_id']);
     }
-    if (isset($_POST['atajo'])) {
+    if (isset($_POST['atajo']) && is_string($_POST['atajo'])) {
         $atajo = trim($_POST['atajo']);
     }
 
-    // Hasta 3 fotos por mensaje: campos images[] (nuevo) o image (compatibilidad)
-    if (isset($_FILES['images']) && is_array($_FILES['images']['tmp_name'])) {
-        foreach ($_FILES['images']['tmp_name'] as $i => $tmpPath) {
-            if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK && count($imagenes) < 3) {
-                $mime = mime_content_type($tmpPath) ?: 'image/jpeg';
-                $imagenes[] = ['base64' => base64_encode(file_get_contents($tmpPath)), 'mime' => $mime];
-            }
-        }
-    } elseif (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $tmpPath = $_FILES['image']['tmp_name'];
-        $mime = mime_content_type($tmpPath) ?: 'image/jpeg';
-        $imagenes[] = ['base64' => base64_encode(file_get_contents($tmpPath)), 'mime' => $mime];
+    // Fotos: solo el campo images[] y con sus validaciones (los campos antiguos
+    // "image" e "image_base64" ya no se aceptan: no pasaban ningún control).
+    $avisoFotos = null;
+    if (isset($_FILES['images'])) {
+        [$imagenes, $avisoFotos] = chatLeerImagenes($_FILES['images']);
+    } elseif (empty($_POST) && stripos($_SERVER['CONTENT_TYPE'] ?? '', 'multipart/form-data') === 0) {
+        // El envío superó el tamaño que acepta el servidor (post_max_size) y llegó vacío.
+        $avisoFotos = 'Puedes enviar hasta 3 fotos JPG, PNG o WebP de 4 MB cada una.';
+    }
+    if ($avisoFotos !== null) {
+        echo json_encode(['status' => 'error', 'reply' => $avisoFotos], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     if (empty($mensaje) && empty($imagenes)) {
         $rawInput = file_get_contents('php://input');
         if (!empty($rawInput)) {
             $jsonData = json_decode($rawInput, true);
-            if (isset($jsonData['message'])) {
+            if (isset($jsonData['message']) && is_string($jsonData['message'])) {
                 $mensaje = trim($jsonData['message']);
             }
-            if (isset($jsonData['sesion_id'])) {
+            if (isset($jsonData['sesion_id']) && is_string($jsonData['sesion_id'])) {
                 $sesionId = trim($jsonData['sesion_id']);
-            }
-            if (isset($jsonData['image_base64'])) {
-                $imagenes[] = ['base64' => $jsonData['image_base64'], 'mime' => 'image/jpeg'];
             }
         }
     }
+}
+
+// Un mensaje muy largo solo encarece la consulta a la IA.
+if (mb_strlen($mensaje) > 1000) {
+    echo json_encode(['status' => 'error', 'reply' => 'Tu mensaje es muy largo. Escríbelo en menos de 1.000 caracteres, por favor.'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 if (empty($mensaje) && empty($imagenes)) {

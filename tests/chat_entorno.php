@@ -72,14 +72,15 @@ function entornoTerminar(array $e): void {
     @rmdir($e['tmp']);
 }
 
-/** POST a backend/chat.php. Devuelve la respuesta JSON más '_segundos'. */
+/** POST a backend/chat.php (con CURLFile en $campos se envía multipart). Devuelve la respuesta JSON más '_segundos'. */
 function chat(array $e, array $campos, bool $json = false): array {
+    $conArchivos = !$json && array_filter($campos, fn($v) => $v instanceof CURLFile) !== [];
     $ch = curl_init($e['sitio'] . '/backend/chat.php');
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 90,
-        CURLOPT_POSTFIELDS => $json ? json_encode($campos, JSON_UNESCAPED_UNICODE) : http_build_query($campos),
+        CURLOPT_POSTFIELDS => $json ? json_encode($campos, JSON_UNESCAPED_UNICODE) : ($conArchivos ? $campos : http_build_query($campos)),
         CURLOPT_HTTPHEADER => $json ? ['Content-Type: application/json'] : [],
     ]);
     $inicio = microtime(true);

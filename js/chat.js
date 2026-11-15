@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const botonesAbrirChat = document.querySelectorAll('[data-abrir-chat], #gmgHomeChatCTA');
 
     const MAX_IMAGENES = 3;
+    const MAX_BYTES_IMAGEN = 4 * 1024 * 1024;
+    const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];
     const MAX_HISTORIAL_GUARDADO = 24; // turnos guardados en localStorage
     const STORAGE_KEY_SESION = 'gmg_chat_sesion_id';
     const STORAGE_KEY_HISTORIAL = 'gmg_chat_historial';
@@ -178,7 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             files.forEach(file => {
                 if (currentSelectedFiles.length >= MAX_IMAGENES) return;
-                if (!file.type.startsWith('image/')) {
+                // Lo mismo que revisa el servidor (F1-8): JPG, PNG o WebP de hasta 4 MB.
+                if (!TIPOS_IMAGEN.includes(file.type) || file.size > MAX_BYTES_IMAGEN) {
                     rechazadasPorTipo = true;
                     return;
                 }
@@ -187,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (rechazadasPorTipo) {
-                mostrarAvisoChat('Solo puedes adjuntar archivos de imagen (JPG, PNG, etc.).');
+                mostrarAvisoChat('Solo puedes adjuntar fotos JPG, PNG o WebP de hasta 4 MB.');
             }
             if (files.length > agregadas && !rechazadasPorTipo) {
                 mostrarAvisoChat('Puedes adjuntar un máximo de ' + MAX_IMAGENES + ' fotos por mensaje.');

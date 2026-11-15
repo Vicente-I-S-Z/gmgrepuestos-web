@@ -30,6 +30,40 @@ function chatVerificarLimite() {
     return true;
 }
 
+/**
+ * Fotos adjuntas al mensaje (E5-H13, RNF-036, INC-02): máximo 3, de 4 MB cada
+ * una, y solo JPG, PNG o WebP según su contenido real (finfo), no según el
+ * nombre ni lo que declare el navegador. Si alguna no cumple se rechaza todo.
+ * $archivos es $_FILES['images']. Devuelve [imagenes, aviso o null]; cada
+ * imagen: ['base64' => ..., 'mime' => ...].
+ */
+function chatLeerImagenes(array $archivos): array {
+    $aviso = 'Puedes enviar hasta 3 fotos JPG, PNG o WebP de 4 MB cada una.';
+    $rutas = (array)($archivos['tmp_name'] ?? []);
+    $permitidos = ['image/jpeg', 'image/png', 'image/webp'];
+    $maximo = 4 * 1024 * 1024;
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $imagenes = [];
+    foreach ($rutas as $i => $ruta) {
+        $error = (int)(((array)($archivos['error'] ?? []))[$i] ?? UPLOAD_ERR_NO_FILE);
+        if ($error === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+        if ($error !== UPLOAD_ERR_OK || !is_uploaded_file($ruta) || filesize($ruta) > $maximo) {
+            return [[], $aviso];
+        }
+        $mime = $finfo->file($ruta);
+        if (!in_array($mime, $permitidos, true)) {
+            return [[], $aviso];
+        }
+        $imagenes[] = ['base64' => base64_encode(file_get_contents($ruta)), 'mime' => $mime];
+    }
+    if (count($imagenes) > 3) {
+        return [[], $aviso];
+    }
+    return [$imagenes, null];
+}
+
 // =========================================================
 // 2) Registro de conversaciones y mensajes (para el panel de
 //    analítica en Admin)
