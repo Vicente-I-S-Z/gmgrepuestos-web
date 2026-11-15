@@ -13,6 +13,10 @@ foreach (['q', 'modelo', 'categoria'] as $filtro) {
 }
 
 $productos = [];
+$porPagina = 24;
+$paginaActual = isset($_GET['pagina']) && is_string($_GET['pagina']) && ctype_digit($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
+$totalProductos = 0;
+$totalPaginas = 1;
 $mostrarSelector = true; // Por defecto mostramos las tarjetas de autos
 $categoriasDisponibles = [];
 
@@ -66,28 +70,56 @@ if (isset($conexion) && !$conexion->connect_error) {
             $params = array_merge($params, $busqueda['params']);
         }
 
-        $sql .= " WHERE " . implode(" AND ", $where);
+        $condicion = " WHERE " . implode(" AND ", $where);
+        $consultar = function ($sql, $tipos, $params) use ($conexion) {
+            $stmt = $conexion->prepare($sql);
+            if (!$stmt) {
+                error_log('[GMG Tienda] No se pudo preparar el listado: ' . $conexion->error);
+                return [];
+            }
+            if ($tipos !== '') {
+                $stmt->bind_param($tipos, ...$params);
+            }
+            $stmt->execute();
+            $filas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+            return $filas;
+        };
+
+        // Paginación (F2-6, RF-008): 24 por página; una página fuera de rango muestra la última.
+        $totalProductos = (int)($consultar("SELECT COUNT(*) AS total FROM " . gmgSqlProductos() . " p" . $condicion, $tipos, $params)[0]['total'] ?? 0);
+        $totalPaginas = max(1, (int)ceil($totalProductos / $porPagina));
+        $paginaActual = min($paginaActual, $totalPaginas);
+
+        $sql .= $condicion;
         if ($busqueda) {
-            // Lo más parecido primero (SKU exacto, palabras en el nombre); los parámetros del orden van al final.
+            // Lo más parecido primero (SKU exacto, palabras en el nombre); los parámetros del orden van después.
             $sql .= " ORDER BY " . $busqueda['orden'] . ", (p.stock > 0) DESC, " . $orden;
             $tipos .= $busqueda['tipos_orden'];
             $params = array_merge($params, $busqueda['params_orden']);
         } else {
             $sql .= " ORDER BY " . $orden;
         }
+        $sql .= " LIMIT $porPagina OFFSET ?";
+        $tipos .= 'i';
+        $params[] = ($paginaActual - 1) * $porPagina;
 
-        $stmt = $conexion->prepare($sql);
-        if ($stmt) {
-            if ($tipos !== '') {
-                $stmt->bind_param($tipos, ...$params);
-            }
-            $stmt->execute();
-            $productos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            $stmt->close();
-        } else {
-            error_log('[GMG Tienda] No se pudo preparar la búsqueda: ' . $conexion->error);
+        $productos = $totalProductos > 0 ? $consultar($sql, $tipos, $params) : [];
+    }
+}
+
+/** Dirección de una página del listado, con los mismos filtros (la página 1 va sin "pagina"). */
+function gmgEnlacePagina($numero) {
+    $filtros = [];
+    foreach (['modelo', 'categoria', 'q'] as $filtro) {
+        if (!empty($_GET[$filtro])) {
+            $filtros[$filtro] = $_GET[$filtro];
         }
     }
+    if ($numero > 1) {
+        $filtros['pagina'] = $numero;
+    }
+    return 'index.php?' . http_build_query($filtros);
 }
 // --- Datos para buscadores (E8-H8): título, descripción y etiqueta canonical ---
 // Las páginas con filtros (modelo, categoría, búsqueda) apuntan con "canonical"
@@ -95,13 +127,17 @@ if (isset($conexion) && !$conexion->connect_error) {
 $modeloCanonico = !empty($_GET['modelo']) ? gmgModeloCorto((string)$_GET['modelo']) : '';
 $baseSitio = gmgUrlBase();
 $urlCanonica = $modeloCanonico !== ''
-    ? $baseSitio . '/index.php?modelo=' . urlencode($modeloCanonico)
+    ? $baseSitio . '/index.php?modelo=' . urlencode($modeloCanonico) . ($paginaActual > 1 ? '&pagina=' . $paginaActual : '')
     : $baseSitio . '/';
 $tituloPagina = 'GMG Repuestos SpA - Especialistas en Suzuki';
 $descripcionPagina = 'Repuestos originales y compatibles para ' . $modelosCortosTexto . '. Compra en línea con Mercado Pago y coordina la entrega por WhatsApp.';
 if ($modeloCanonico !== '') {
     $tituloPagina = 'Repuestos para Suzuki ' . $modeloCanonico . ' - GMG Repuestos';
     $descripcionPagina = 'Repuestos para Suzuki ' . $modeloCanonico . ': filtros, frenos, motor, suspensión y más. Revisa la compatibilidad por año y compra en línea.';
+    if ($paginaActual > 1) {
+        // Cada página del listado con título propio (no se repiten títulos en buscadores).
+        $tituloPagina = 'Repuestos para Suzuki ' . $modeloCanonico . ' (página ' . $paginaActual . ') - GMG Repuestos';
+    }
 }
 $esBusquedaFiltrada = !empty($_GET['q']) || !empty($_GET['categoria']);
 
@@ -240,9 +276,14 @@ gmgCabeceraPublica([
                     $tituloCatálogo .= " - Búsqueda: '" . htmlspecialchars($_GET['q']) . "'";
                 }
             ?>
-            <h2><?php echo $tituloCatálogo; ?></h2>
+            <h2 id="listado"><?php echo $tituloCatálogo; ?></h2>
 
             <?php if (count($productos) > 0): ?>
+                <?php $desde = ($paginaActual - 1) * $porPagina + 1; ?>
+                <p class="listado-resumen">
+                    <?php echo $totalProductos === 1 ? '1 repuesto' : gmgH(number_format($totalProductos, 0, ',', '.')) . ' repuestos'; ?>
+                    <?php if ($totalPaginas > 1): ?>· mostrando del <?php echo $desde; ?> al <?php echo $desde + count($productos) - 1; ?><?php endif; ?>
+                </p>
                 <div class="productos-grid">
                     <?php foreach($productos as $producto): ?>
                     <?php
@@ -320,6 +361,36 @@ gmgCabeceraPublica([
                     </div>
                     <?php endforeach; ?>
                 </div>
+
+                <?php if ($totalPaginas > 1): ?>
+                    <?php
+                        // Números visibles: la primera, la última y dos alrededor de la actual; el resto como "…".
+                        $numeros = array_unique(array_merge([1, $totalPaginas], range(max(1, $paginaActual - 2), min($totalPaginas, $paginaActual + 2))));
+                        sort($numeros);
+                    ?>
+                    <nav class="paginacion" aria-label="Páginas de resultados">
+                        <?php if ($paginaActual > 1): ?>
+                            <a class="paginacion-flecha" href="<?php echo gmgH(gmgEnlacePagina($paginaActual - 1)); ?>#listado" rel="prev">‹ Anterior</a>
+                        <?php endif; ?>
+                        <ol>
+                            <?php $anterior = 0; ?>
+                            <?php foreach ($numeros as $numero): ?>
+                                <?php if ($numero - $anterior > 1): ?><li class="paginacion-salto" aria-hidden="true">…</li><?php endif; ?>
+                                <li>
+                                    <?php if ($numero === $paginaActual): ?>
+                                        <span aria-current="page"><?php echo $numero; ?></span>
+                                    <?php else: ?>
+                                        <a href="<?php echo gmgH(gmgEnlacePagina($numero)); ?>#listado" aria-label="Página <?php echo $numero; ?>"><?php echo $numero; ?></a>
+                                    <?php endif; ?>
+                                </li>
+                                <?php $anterior = $numero; ?>
+                            <?php endforeach; ?>
+                        </ol>
+                        <?php if ($paginaActual < $totalPaginas): ?>
+                            <a class="paginacion-flecha" href="<?php echo gmgH(gmgEnlacePagina($paginaActual + 1)); ?>#listado" rel="next">Siguiente ›</a>
+                        <?php endif; ?>
+                    </nav>
+                <?php endif; ?>
             <?php else: ?>
                 <div class="sin-resultados" role="status">
                     <p>No encontramos repuestos para tu búsqueda<?php echo !empty($_GET['modelo']) ? ' en el modelo ' . htmlspecialchars($_GET['modelo']) : ''; ?>.</p>

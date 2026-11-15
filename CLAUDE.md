@@ -44,6 +44,8 @@ Fecha de término del proyecto: 18-12-2026.
 - Descuento de stock al aprobar un pedido en el panel (F2-3, idempotente y con `FOR UPDATE`): `php tests/pedido_aprobar_test.php`
 - Ficha de producto (F2-4: contenido, SEO, 404, escape y, en Edge, chat y carrito a 360 y 1366 px; deja la base como estaba): `php tests/producto_ficha_test.php`
 - Buscador y sugerencias de la tienda (F2-5: CP-03 a CP-06, con Edge; deja la base como estaba): `php tests/buscador_test.php`
+- Paginación del listado de a 24 (F2-6, con Edge a 360 px): `php tests/paginacion_test.php`
+- Teléfono chileno en servidor, `cart.js` (con Node) y checkout (F2-7): `php tests/telefono_test.php`
 - Ver una página a 360 px reales con Edge sin ventana (no baja de unos 500 px): abrir `/tests/vista_ancho.html?ancho=360&url=/index.php%3Fq%3Dfiltro` y sacar la captura
 - Asistente con la IA REAL (gasta la clave del `.env` local; pedir permiso a Vicente antes): `php tests/chat_ia_real_test.php --confirmo-gasto` (informe en `docs/evidencias/resultados_F1-9.md`)
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).

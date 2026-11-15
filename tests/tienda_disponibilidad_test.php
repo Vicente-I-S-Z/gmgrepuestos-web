@@ -38,12 +38,23 @@ try {
     }
     $estados = [];
     foreach (['index.php?modelo=swift', 'index.php?q=filtro', 'index.php?categoria=Frenos'] as $pagina) {
-        $dom = new DOMDocument();
-        @$dom->loadHTML('<?xml encoding="utf-8">' . file_get_contents("$sitio/$pagina"));
-        $xp = new DOMXPath($dom);
-        $tarjetas = $xp->query("//div[contains(@class,'producto-card')]");
+        // El listado va paginado (F2-6): se recorren todas las páginas siguiendo rel="next".
+        $tarjetas = [];
+        $xps = [];
+        for ($url = "$sitio/$pagina"; $url !== ''; ) {
+            $dom = new DOMDocument();
+            @$dom->loadHTML('<?xml encoding="utf-8">' . file_get_contents($url));
+            $xp = new DOMXPath($dom);
+            foreach ($xp->query("//div[contains(@class,'producto-card')]") as $t) {
+                $tarjetas[] = $t;
+                $xps[] = $xp;
+            }
+            $siguiente = $xp->query("//a[@rel='next']/@href")->item(0);
+            $url = $siguiente ? "$sitio/" . preg_replace('/#.*$/', '', $siguiente->value) : '';
+        }
         $malas = [];
-        foreach ($tarjetas as $t) {
+        foreach ($tarjetas as $n => $t) {
+            $xp = $xps[$n];
             $id = (int)$t->getAttribute('data-producto-id');
             $esperada = chatDisponibilidad((int)($stock[$id] ?? -1));
             $etiqueta = trim((string)($xp->query(".//span[contains(@class,'gmg-disponibilidad')]", $t)->item(0)->textContent ?? ''));
@@ -61,7 +72,7 @@ try {
                 $malas[] = "id $id: con stock pero sin sus botones";
             }
         }
-        revisar($tarjetas->length > 0 && $malas === [], "$pagina: etiqueta y botones correctos en las {$tarjetas->length} tarjetas",
+        revisar(count($tarjetas) > 0 && $malas === [], "$pagina: etiqueta y botones correctos en las " . count($tarjetas) . " tarjetas",
                 $malas ? implode('; ', array_slice($malas, 0, 3)) : '');
     }
     ksort($estados);

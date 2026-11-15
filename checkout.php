@@ -35,6 +35,13 @@ if ($nombreCliente === '' || $apellidoCliente === '' || $rutCliente === '' || $t
     exit;
 }
 
+// Celular chileno (F2-7): se guarda siempre como "+56 9 1234 5678".
+$telefonoCliente = gmgTelefonoChile($telefonoCliente);
+if ($telefonoCliente === '') {
+    echo json_encode(['success' => false, 'message' => 'El teléfono no es válido. Ingresa un celular chileno, por ejemplo +56 9 1234 5678.']);
+    exit;
+}
+
 if (!filter_var($emailCliente, FILTER_VALIDATE_EMAIL)) {
     echo json_encode(['success' => false, 'message' => 'El correo electrónico ingresado no es válido.']);
     exit;

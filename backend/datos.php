@@ -143,6 +143,22 @@ function gmgNormalizarRut($rut) {
 }
 
 /**
+ * Celular chileno (F2-7, RF-021): acepta "+56 9 1234 5678", "56912345678", "9 1234 5678"
+ * o "912345678" (con espacios, guiones, puntos o paréntesis) y lo devuelve como
+ * "+56 9 1234 5678". Devuelve '' si no es un celular (9 dígitos que empiezan con 9).
+ */
+function gmgTelefonoChile($telefono) {
+    $digitos = preg_replace('/\D/', '', (string)$telefono);
+    if (strlen($digitos) === 11 && strpos($digitos, '56') === 0) {
+        $digitos = substr($digitos, 2);
+    }
+    if (!preg_match('/^9\d{8}$/', $digitos)) {
+        return '';
+    }
+    return '+56 9 ' . substr($digitos, 1, 4) . ' ' . substr($digitos, 5);
+}
+
+/**
  * ¿El RUT chileno es válido? Revisa el formato y el dígito verificador
  * (cálculo "módulo 11"). Acepta con o sin puntos: "12.345.678-5".
  */

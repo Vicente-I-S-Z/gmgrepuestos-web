@@ -24,12 +24,23 @@ if (!$idOptica || count($terminalesSwift) < 3) {
 }
 $original = $db->query("SELECT id_repuesto, nombre, codigo_oem FROM repuestos WHERE id_repuesto = $idOptica")->fetch_assoc();
 
-/** IDs de las tarjetas de index.php y código HTTP. */
+/** IDs de las tarjetas de index.php (todas las páginas, siguiendo rel="next") y código HTTP de la primera. */
 function listado(array $s, string $query): array {
-    $html = @file_get_contents($s['url'] . '/index.php?' . $query, false, stream_context_create(['http' => ['ignore_errors' => true]]));
-    preg_match('~HTTP/\S+ (\d+)~', $http_response_header[0] ?? '', $m);
-    preg_match_all('~class="producto-card" data-producto-id="(\d+)"~', (string)$html, $ids);
-    return ['codigo' => (int)($m[1] ?? 0), 'ids' => array_map('intval', $ids[1]), 'html' => (string)$html];
+    $ids = [];
+    $codigo = 0;
+    $primera = '';
+    for ($url = $s['url'] . '/index.php?' . $query; $url !== ''; ) {
+        $html = (string)@file_get_contents($url, false, stream_context_create(['http' => ['ignore_errors' => true]]));
+        if ($primera === '') {
+            preg_match('~HTTP/\S+ (\d+)~', $http_response_header[0] ?? '', $m);
+            $codigo = (int)($m[1] ?? 0);
+            $primera = $html;
+        }
+        preg_match_all('~class="producto-card" data-producto-id="(\d+)"~', $html, $encontrados);
+        $ids = array_merge($ids, array_map('intval', $encontrados[1]));
+        $url = preg_match('~<a class="paginacion-flecha" href="([^"#]+)[^"]*" rel="next"~', $html, $sig) ? $s['url'] . '/' . html_entity_decode($sig[1]) : '';
+    }
+    return ['codigo' => $codigo, 'ids' => $ids, 'html' => $primera];
 }
 function sugerencias(array $s, string $q): ?array {
     $r = json_decode((string)@file_get_contents($s['url'] . '/backend/buscar_sugerencias.php?q=' . rawurlencode($q)), true);

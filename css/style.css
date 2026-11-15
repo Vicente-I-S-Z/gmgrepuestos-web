@@ -1893,3 +1893,19 @@ body { padding-bottom: 0; }
 @media (prefers-reduced-motion: reduce) {
     .ficha-galeria .producto-img, .ficha-relacionado, .ficha-btn-asistente, .ficha-btn-whatsapp { transition: none; }
 }
+
+/* ---------- Paginación del listado (F2-6) ---------- */
+#listado { scroll-margin-top: 96px; }
+.listado-resumen { margin-top: 6px; color: #555; font-size: 0.9rem; }
+.listado-resumen + .productos-grid { padding-top: 20px; }
+.paginacion { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: -24px 0 48px; }
+.paginacion ol { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.paginacion a, .paginacion span[aria-current] { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 12px; border-radius: var(--radius-sm); font-weight: 700; text-decoration: none; }
+.paginacion a { background: var(--color-fondo); color: var(--color-principal); border: 1px solid #ddd; transition: border-color 0.15s ease, color 0.15s ease; }
+.paginacion a:hover { border-color: var(--color-acento); color: var(--color-acento); }
+.paginacion span[aria-current] { background: var(--color-acento); color: #fff; }
+.paginacion-salto { display: inline-flex; align-items: center; min-height: 44px; color: #777; }
+@media (max-width: 480px) {
+    .paginacion-flecha { flex: 1 1 40%; }
+    .paginacion ol { order: -1; flex-basis: 100%; }
+}

@@ -578,9 +578,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return dv === esperado;
     }
 
+    // Celular chileno (F2-7, RF-021): misma regla que gmgTelefonoChile() en el servidor.
+    // Acepta +56 9 1234 5678, 56912345678 o 912345678, con o sin espacios ni guiones.
     function validarTelefono(tel) {
-        const digitos = tel.replace(/\D/g, '');
-        return digitos.length >= 8;
+        let digitos = tel.replace(/\D/g, '');
+        if (digitos.length === 11 && digitos.startsWith('56')) digitos = digitos.slice(2);
+        return /^9\d{8}$/.test(digitos);
     }
 
     function validarEmail(email) {
@@ -608,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!rut) errores.push(['clienteRut', 'errClienteRut', 'Escribe tu RUT.']);
             else if (!validarRut(rut)) errores.push(['clienteRut', 'errClienteRut', 'El RUT no es válido. Revisa que esté completo y con guion (ej: 12.345.678-9).']);
             if (!telefono) errores.push(['clienteTelefono', 'errClienteTelefono', 'Escribe tu teléfono.']);
-            else if (!validarTelefono(telefono)) errores.push(['clienteTelefono', 'errClienteTelefono', 'El teléfono debe tener al menos 8 números.']);
+            else if (!validarTelefono(telefono)) errores.push(['clienteTelefono', 'errClienteTelefono', 'Ingresa un celular chileno, por ejemplo +56 9 1234 5678.']);
             if (!email) errores.push(['clienteEmail', 'errClienteEmail', 'Escribe tu correo electrónico.']);
             else if (!validarEmail(email)) errores.push(['clienteEmail', 'errClienteEmail', 'El correo no es válido (ej: nombre@correo.cl).']);
             if (!acepta) errores.push(['clienteAcepta', 'errClienteAcepta', 'Para continuar debes aceptar los términos y condiciones y la política de privacidad.']);
