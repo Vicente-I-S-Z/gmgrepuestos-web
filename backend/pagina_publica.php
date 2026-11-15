@@ -59,12 +59,6 @@ function gmgDatosModelosPublicos($conexion) {
     return ['modelosInfo' => $modelosInfo, 'modelosCortosTexto' => $modelosCortosTexto];
 }
 
-/** Versión de un archivo (para que el navegador recargue CSS/JS solo cuando cambian). */
-function gmgVersionArchivo($rutaRelativa) {
-    $ruta = dirname(__DIR__) . '/' . $rutaRelativa;
-    return is_file($ruta) ? filemtime($ruta) : 1;
-}
-
 /**
  * Imprime el inicio de la página: <head> y encabezado con el menú.
  *

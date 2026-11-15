@@ -101,3 +101,12 @@ function gmgEsLocal() {
 function gmgCurlVerificarSsl() {
     return (string)gmgEnv('CURL_VERIFICAR_SSL', '1') !== '0';
 }
+
+/**
+ * Versión de un archivo (para que el navegador recargue CSS/JS solo cuando cambian).
+ * Vive aquí porque config.php la carga en todas las páginas, públicas y del panel.
+ */
+function gmgVersionArchivo($rutaRelativa) {
+    $ruta = dirname(__DIR__) . '/' . $rutaRelativa;
+    return is_file($ruta) ? filemtime($ruta) : 1;
+}

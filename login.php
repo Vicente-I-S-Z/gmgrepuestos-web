@@ -49,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso administrador - GMG Repuestos</title>
     <meta name="robots" content="noindex, nofollow">
-    <link rel="stylesheet" href="css/style.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="css/admin.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="css/style.css?v=<?php echo gmgVersionArchivo('css/style.css'); ?>">
+    <link rel="stylesheet" href="css/admin.css?v=<?php echo gmgVersionArchivo('css/admin.css'); ?>">
 </head>
 <body class="admin-body">
     <div class="login-wrapper">
