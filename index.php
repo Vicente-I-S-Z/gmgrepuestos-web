@@ -5,6 +5,13 @@ require_once 'backend/datos.php';
 require_once 'backend/pagina_publica.php';
 require_once 'backend/chat_busqueda.php'; // chatDisponibilidad(): misma etiqueta de stock que el asistente
 
+// Filtros de la URL: solo texto (un ?q[]=x rompía htmlspecialchars en PHP 8).
+foreach (['q', 'modelo', 'categoria'] as $filtro) {
+    if (isset($_GET[$filtro]) && !is_string($_GET[$filtro])) {
+        unset($_GET[$filtro]);
+    }
+}
+
 $productos = [];
 $mostrarSelector = true; // Por defecto mostramos las tarjetas de autos
 $categoriasDisponibles = [];
@@ -39,26 +46,46 @@ if (isset($conexion) && !$conexion->connect_error) {
         // compatibilidades (un repuesto puede servir a varios modelos).
         $sql = "SELECT * FROM " . gmgSqlProductos() . " p";
         $where = ["p.activo = 1"];
+        $tipos = '';
+        $params = [];
+        $orden = 'p.categoria, p.nombre';
 
         if (!empty($_GET['modelo'])) {
             $where[] = gmgCondicionModelo($conexion, $_GET['modelo'], 'p.id');
         }
         if (!empty($_GET['categoria'])) {
-            $where[] = "p.categoria = '" . $conexion->real_escape_string($_GET['categoria']) . "'";
+            $where[] = "p.categoria = ?";
+            $tipos .= 's';
+            $params[] = $_GET['categoria'];
         }
-        if (!empty($_GET['q'])) {
-            // Busca por nombre O por código SKU / OEM exacto o parcial (ej: FRE-SWI3-PDL)
-            $qEscapado = $conexion->real_escape_string($_GET['q']);
-            $where[] = "(p.nombre LIKE '%$qEscapado%' OR p.sku LIKE '%$qEscapado%' OR p.codigo_oem LIKE '%$qEscapado%')";
+        // Buscador por palabras (F2-5): mismas reglas que el chat, todas las palabras deben estar.
+        $busqueda = !empty($_GET['q']) ? gmgBusquedaTienda(mb_substr($_GET['q'], 0, 100)) : null;
+        if ($busqueda) {
+            $where[] = $busqueda['condicion'];
+            $tipos .= $busqueda['tipos'];
+            $params = array_merge($params, $busqueda['params']);
         }
 
-        $sql .= " WHERE " . implode(" AND ", $where) . " ORDER BY p.categoria, p.nombre";
+        $sql .= " WHERE " . implode(" AND ", $where);
+        if ($busqueda) {
+            // Lo más parecido primero (SKU exacto, palabras en el nombre); los parámetros del orden van al final.
+            $sql .= " ORDER BY " . $busqueda['orden'] . ", (p.stock > 0) DESC, " . $orden;
+            $tipos .= $busqueda['tipos_orden'];
+            $params = array_merge($params, $busqueda['params_orden']);
+        } else {
+            $sql .= " ORDER BY " . $orden;
+        }
 
-        $resultado = $conexion->query($sql);
-        if ($resultado && $resultado->num_rows > 0) {
-            while($fila = $resultado->fetch_assoc()) {
-                $productos[] = $fila;
+        $stmt = $conexion->prepare($sql);
+        if ($stmt) {
+            if ($tipos !== '') {
+                $stmt->bind_param($tipos, ...$params);
             }
+            $stmt->execute();
+            $productos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+        } else {
+            error_log('[GMG Tienda] No se pudo preparar la búsqueda: ' . $conexion->error);
         }
     }
 }

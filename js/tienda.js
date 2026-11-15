@@ -59,6 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let temporizador = null;
         let indiceResaltado = -1;
 
+        function escapeHTML(texto) {
+            return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
         input.addEventListener('input', () => {
             const q = input.value.trim();
             clearTimeout(temporizador);
@@ -133,20 +137,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Todo dato del producto va escapado (CP-06) y cada sugerencia abre su ficha (F2-4).
             let html = '';
             sugerencias.forEach(s => {
                 html += `
-                    <a href="index.php?q=${encodeURIComponent(s.sku)}" class="search-sugerencia-item">
-                        <img src="${s.imagen}" alt="" onerror="this.onerror=null;this.src='img/placeholder-repuesto.svg';">
+                    <a href="producto.php?id=${encodeURIComponent(s.id)}" class="search-sugerencia-item">
+                        <img src="${escapeHTML(s.imagen)}" alt="" class="search-sugerencia-img">
                         <div class="search-sugerencia-info">
-                            <div class="search-sugerencia-nombre">${s.nombre}</div>
-                            <div class="search-sugerencia-sku">SKU: ${s.sku} · ${s.modelo}</div>
+                            <div class="search-sugerencia-nombre">${escapeHTML(s.nombre)}</div>
+                            <div class="search-sugerencia-sku">SKU: ${escapeHTML(s.sku)}${s.modelo ? ' · ' + escapeHTML(s.modelo) : ''}</div>
                         </div>
-                        <div class="search-sugerencia-precio">$${s.precio.toLocaleString('es-CL')}</div>
+                        <div class="search-sugerencia-precio">$${Number(s.precio).toLocaleString('es-CL')}</div>
                     </a>
                 `;
             });
             contenedor.innerHTML = html;
+            // Foto que no carga: la genérica (sin onerror en línea).
+            contenedor.querySelectorAll('.search-sugerencia-img').forEach(img => {
+                img.addEventListener('error', () => { img.src = 'img/placeholder-repuesto.svg'; }, { once: true });
+            });
             contenedor.classList.add('open');
         }
 

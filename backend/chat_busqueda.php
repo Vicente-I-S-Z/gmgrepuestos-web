@@ -215,6 +215,57 @@ function chatConsultaBusqueda(array $args, int $limite = 8, bool $estricto = tru
     return [$sql, $tiposOrden . $tipos, array_merge($paramsOrden, $params)];
 }
 
+/**
+ * Búsqueda de la tienda (F2-5: E2-H3, E2-H7, INC-07): el buscador y sus sugerencias
+ * usan la misma normalización del chat (plurales, sinónimos, palabras vacías).
+ * Calza si el texto completo está en el SKU u OEM, o si TODAS las palabras aparecen
+ * (cada una en el nombre, la categoría, la descripción, el SKU, el OEM o los modelos
+ * compatibles; así "terminal swift" encuentra los terminales del Swift).
+ * Trabaja sobre las columnas de gmgSqlProductos() con el alias dado.
+ * Devuelve null si no hay nada que buscar; si no, la condición y el orden
+ * (SKU exacto, SKU que empieza igual, palabras en el nombre) con sus parámetros.
+ */
+function gmgBusquedaTienda(string $q, string $alias = 'p'): ?array {
+    $q = trim($q);
+    if ($q === '') {
+        return null;
+    }
+    // El texto completo va a un LIKE: %, _ y \ se buscan como letras, no como comodines.
+    $qLike = '%' . addcslashes($q, '%_\\') . '%';
+    $condicion = "($alias.sku LIKE ? OR $alias.codigo_oem LIKE ?)";
+    $tipos = 'ss';
+    $params = [$qLike, $qLike];
+
+    $grupos = chatGruposBusqueda($q);
+    $orden = ["CASE WHEN $alias.sku = ? THEN 0 WHEN $alias.sku LIKE ? THEN 1 ELSE 2 END"];
+    $tiposOrden = 'ss';
+    $paramsOrden = [$q, addcslashes($q, '%_\\') . '%'];
+    if ($grupos) {
+        $todas = [];
+        $puntaje = [];
+        foreach ($grupos as $grupo) {
+            $alternativas = [];
+            foreach ($grupo as $posicion => $raiz) {
+                $alternativas[] = "($alias.nombre LIKE ? OR $alias.categoria LIKE ? OR $alias.descripcion LIKE ?
+                                   OR $alias.sku LIKE ? OR $alias.codigo_oem LIKE ? OR $alias.modelo LIKE ?)";
+                $tipos .= 'ssssss';
+                array_push($params, "%$raiz%", "%$raiz%", "%$raiz%", "%$raiz%", "%$raiz%", "%$raiz%");
+                // Como en el chat: la palabra del cliente en el nombre vale 2 y un sinónimo 1.
+                $puntaje[] = "CASE WHEN $alias.nombre LIKE ? THEN " . ($posicion === 0 ? 2 : 1) . ' ELSE 0 END';
+                $tiposOrden .= 's';
+                $paramsOrden[] = "%$raiz%";
+            }
+            $todas[] = '(' . implode(' OR ', $alternativas) . ')';
+        }
+        $condicion = "($condicion OR (" . implode(' AND ', $todas) . '))';
+        $orden[] = '(' . implode(' + ', $puntaje) . ') DESC';
+    }
+    return [
+        'condicion' => $condicion, 'tipos' => $tipos, 'params' => $params,
+        'orden' => implode(', ', $orden), 'tipos_orden' => $tiposOrden, 'params_orden' => $paramsOrden,
+    ];
+}
+
 /** Etiqueta de stock que entiende el cliente (RF-013). */
 function chatDisponibilidad(int $stock): string {
     if ($stock <= 0) return 'Sin stock';

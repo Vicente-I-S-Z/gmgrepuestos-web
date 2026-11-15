@@ -217,7 +217,7 @@ Cambio del 15-11: el chat nuevo ya pasó la prueba con la IA real en local (punt
 
 ## 16. Plan de Pruebas v2 (para completar F1-9 y para F5-1)
 
-- [ ] 1. Busca `Plan_de_Pruebas_GMG_Repuestos_v2.docx` (en Drive, carpeta Capstone 2026) y déjalo en `C:\Users\santi\Desktop\Gmgrepuestos\docs\evidencias\`, o pásale la ruta a Claude Code.
+- [x] 1. Busca `Plan_de_Pruebas_GMG_Repuestos_v2.docx` (en Drive, carpeta Capstone 2026) y déjalo en `C:\Users\santi\Desktop\Gmgrepuestos\docs\evidencias\`, o pásale la ruta a Claude Code. **Resuelto el 15-11:** Claude Code lo lee directo desde tu Drive (archivo de Martín, versión del 13-11); se usó para CP-03 a CP-06 en F2-5. Si hay una versión más nueva, avisa.
 - Con él, Claude Code agrega a `tests/chat_ia_real_test.php` los casos que faltan (EV-05, EV-08, EV-09 y CP-24 a CP-35, salvo CP-28 y CP-29) y registra los resultados con sus códigos oficiales.
 
 ## 17. Subir la Fase 1 a Hostinger (asistente IA nuevo)

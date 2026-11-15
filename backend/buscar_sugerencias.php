@@ -1,33 +1,33 @@
 <?php
-// Sugerencias de autocompletado para la barra de búsqueda del storefront.
-// Devuelve hasta 6 productos que coincidan por nombre, SKU o código OEM.
+// Sugerencias de autocompletado para la barra de búsqueda de la tienda.
+// Devuelve hasta 6 productos desde 2 caracteres (decisión del PO, CP-05), con las
+// mismas reglas del buscador y del chat: todas las palabras, plurales y sinónimos (F2-5).
 header('Content-Type: application/json; charset=utf-8');
 require_once 'config.php';
 require_once 'datos.php';
+require_once 'chat_busqueda.php';
 
-$q = trim($_GET['q'] ?? '');
+$q = isset($_GET['q']) && is_string($_GET['q']) ? trim(mb_substr($_GET['q'], 0, 100)) : '';
+$busqueda = mb_strlen($q) >= 2 ? gmgBusquedaTienda($q) : null;
 
-if ($q === '' || mb_strlen($q) < 2) {
+if (!$busqueda) {
     echo json_encode(['sugerencias' => []]);
     exit;
 }
 
-$qEscapado = $conexion->real_escape_string($q);
-
 $sql = "SELECT p.id, p.nombre, p.sku, p.precio, p.imagen_url, p.modelo, p.categoria
         FROM " . gmgSqlProductos() . " p
-        WHERE p.activo = 1
-          AND (p.nombre LIKE '%$qEscapado%' OR p.sku LIKE '%$qEscapado%' OR p.codigo_oem LIKE '%$qEscapado%')
-        ORDER BY
-            CASE WHEN p.sku LIKE '$qEscapado%' THEN 0 ELSE 1 END,
-            p.nombre ASC
+        WHERE p.activo = 1 AND " . $busqueda['condicion'] . "
+        ORDER BY " . $busqueda['orden'] . ", (p.stock > 0) DESC, p.nombre ASC
         LIMIT 6";
 
-$resultado = $conexion->query($sql);
 $sugerencias = [];
-
-if ($resultado) {
-    while ($fila = $resultado->fetch_assoc()) {
+$stmt = $conexion->prepare($sql);
+if ($stmt) {
+    $params = array_merge($busqueda['params'], $busqueda['params_orden']);
+    $stmt->bind_param($busqueda['tipos'] . $busqueda['tipos_orden'], ...$params);
+    $stmt->execute();
+    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $fila) {
         $sugerencias[] = [
             'id' => (int)$fila['id'],
             'nombre' => $fila['nombre'],
@@ -38,6 +38,9 @@ if ($resultado) {
             'categoria' => $fila['categoria'],
         ];
     }
+    $stmt->close();
+} else {
+    error_log('[GMG Sugerencias] No se pudo preparar la búsqueda: ' . $conexion->error);
 }
 
 echo json_encode(['sugerencias' => $sugerencias]);

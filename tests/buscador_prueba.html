@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<title>Prueba de las sugerencias del buscador</title>
+</head>
+<body style="margin:0">
+<!--
+  Página de prueba de tests/buscador_test.php (F2-5). Carga la tienda real en un iframe, escribe en
+  el buscador y revisa las sugerencias: 1 carácter no sugiere, el texto va escapado (la prueba deja
+  un nombre con HTML en la base) y cada sugerencia abre su ficha. Uso: ?q=texto. No se publica (tests/).
+-->
+<iframe id="sitio" title="Tienda" style="width:1200px;height:800px;border:0" src="/index.php"></iframe>
+<pre id="resultado">pendiente</pre>
+<script>
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const q = new URLSearchParams(location.search).get('q') || '';
+const iframe = document.getElementById('sitio');
+
+iframe.addEventListener('load', async () => {
+    await esperar(500);
+    const d = iframe.contentDocument;
+    const w = iframe.contentWindow;
+    const input = d.getElementById('searchInput');
+    const escribir = async (texto) => {
+        input.value = texto;
+        input.dispatchEvent(new w.Event('input', { bubbles: true }));
+        await esperar(1200);
+        return d.querySelectorAll('#searchSugerencias .search-sugerencia-item');
+    };
+    const r = {};
+    r.conUno = (await escribir(q.slice(0, 1))).length;
+    const items = await escribir(q);
+    r.cantidad = items.length;
+    r.primerNombre = items[0] ? items[0].querySelector('.search-sugerencia-nombre').textContent : '';
+    r.primerHref = items[0] ? items[0].getAttribute('href') : '';
+    r.htmlInyectado = d.querySelectorAll('#searchSugerencias b, #searchSugerencias img[src="x"]').length;
+    r.xss = w.__xss === 1;
+    document.getElementById('resultado').textContent = JSON.stringify(r);
+});
+</script>
+</body>
+</html>
