@@ -68,7 +68,7 @@ for r in "BD_v2/" "BD_v2/01_estructura.sql" "BD_v2/catalogo_repuestos.csv" \
 done
 
 echo "== Lógica interna del backend (403) =="
-for n in bot_config config auth chat_helpers email_config email_helpers SmtpMailer modelos datos \
+for n in bot_config config auth chat_helpers chat_busqueda email_config email_helpers SmtpMailer modelos datos \
          entorno seguridad conocimiento pagina_publica auditoria pagos admin_ui; do
     esperar 403 "backend/$n.php"
 done

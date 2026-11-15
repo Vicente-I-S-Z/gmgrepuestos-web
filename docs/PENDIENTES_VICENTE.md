@@ -154,26 +154,28 @@ En producción existe la columna `pedidos.metodo_entrega` (la agregó un script 
 
 Archivos listos en `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_fase0\` (11, idénticos al proyecto). No hay SQL que ejecutar antes.
 
+**Verificado por Claude Code desde afuera (14-11, después de la subida):** tienda, checkout, CSS, JS, imágenes, login y sugerencias en 200 (118 productos del Swift); `/admin/` redirige al login; versión del CSS fija en `login.php` y portada (archivos nuevos); `/backend/config.php`, `entorno.php`, `admin_ui.php`, `parciales/` y `/.htaccess` en 403; `docs/`, `BD_v2/`, `arquitectura/`, `tests/` y `CLAUDE.md` en 404 (no existen en el servidor; Hostinger responde 404 a lo que no existe aunque esté bloqueado, y CP-47 acepta 403 o 404). Vicente confirmó B.4 por captura (`.htaccess` 2.57 KiB y `login.php` 3.14 KiB). Falta C.2 y C.3 (panel con estilos y Códigos con CSRF).
+
 **A. Quitar de producción lo que no debe estar ahí (`docs/`, `BD_v2/`, `arquitectura/`)**
 
 `arquitectura/` hoy se puede abrir desde internet (`/arquitectura/index.html` responde 200). `docs/` y `BD_v2/` están bloqueadas, pero no pertenecen al sitio.
 
-- [ ] 1. En `public_html`, marca `docs`, `BD_v2` y `arquitectura` > botón Descargar > formato zip. Guarda el zip en Descargas (no dentro del proyecto): es la copia por si algo de ahí hace falta.
-- [ ] 2. Con las 3 marcadas > Eliminar.
+- [x] 1. En `public_html`, marca `docs`, `BD_v2` y `arquitectura` > botón Descargar > formato zip. Guarda el zip en Descargas (no dentro del proyecto): es la copia por si algo de ahí hace falta.
+- [x] 2. Con las 3 marcadas > Eliminar.
 
 **B. Subir los archivos sueltos, carpeta por carpeta (nada de zip)**
 
-- [ ] 1. En `public_html`: botón Subir > elige `dist\subida_fase0\.htaccess` y `dist\subida_fase0\login.php` (los 2 juntos) > acepta reemplazar.
-- [ ] 2. Entra a `admin`: Subir > elige los 5 archivos de `dist\subida_fase0\admin\` > acepta reemplazar.
-- [ ] 3. Entra a `backend`: Subir > elige los 4 archivos de `dist\subida_fase0\backend\` (`.htaccess`, `admin_ui.php`, `entorno.php`, `pagina_publica.php`) **juntos, en una sola subida**: `entorno.php` y `pagina_publica.php` deben quedar de la misma versión.
-- [ ] 4. Revisa los tamaños: `.htaccess` 2.57 KiB, `login.php` 3.14 KiB; en `admin`: `avisos.php` 6.29 KiB, `codigos.php` 10.13 KiB, `index.php` 24.77 KiB, `pedidos.php` 16.91 KiB, `productos.php` 21.73 KiB; en `backend`: `.htaccess` 891 B, `admin_ui.php` 3.34 KiB, `entorno.php` 4.28 KiB, `pagina_publica.php` 8.42 KiB.
+- [x] 1. En `public_html`: botón Subir > elige `dist\subida_fase0\.htaccess` y `dist\subida_fase0\login.php` (los 2 juntos) > acepta reemplazar.
+- [x] 2. Entra a `admin`: Subir > elige los 5 archivos de `dist\subida_fase0\admin\` > acepta reemplazar.
+- [x] 3. Entra a `backend`: Subir > elige los 4 archivos de `dist\subida_fase0\backend\` (`.htaccess`, `admin_ui.php`, `entorno.php`, `pagina_publica.php`) **juntos, en una sola subida**: `entorno.php` y `pagina_publica.php` deben quedar de la misma versión.
+- [x] 4. (Confirmado por captura el 14-11: `.htaccess` 2.57 KiB y `login.php` 3.14 KiB en `public_html`.) Revisa los tamaños: `.htaccess` 2.57 KiB, `login.php` 3.14 KiB; en `admin`: `avisos.php` 6.29 KiB, `codigos.php` 10.13 KiB, `index.php` 24.77 KiB, `pedidos.php` 16.91 KiB, `productos.php` 21.73 KiB; en `backend`: `.htaccess` 891 B, `admin_ui.php` 3.34 KiB, `entorno.php` 4.28 KiB, `pagina_publica.php` 8.42 KiB.
 
 **C. Probar en el sitio real**
 
-- [ ] 1. https://gmgrepuestos.cl : la tienda carga con su diseño normal.
+- [x] 1. https://gmgrepuestos.cl : la tienda carga con su diseño normal.
 - [ ] 2. https://gmgrepuestos.cl/admin : inicia sesión; el panel se ve con sus estilos.
 - [ ] 3. Panel > Códigos > presiona "Desactivar" en BIENVENIDO10 y luego "Activar": las dos veces debe decir "Estado del código actualizado." (si dice "No se pudo comprobar la seguridad del formulario", avísale a Claude Code).
-- [ ] 4. Escríbele a Claude Code "subido": revisa desde afuera la tienda, la versión de `login.php` y que `/arquitectura/`, `/tests/`, `/docs/`, `/BD_v2/`, `/.git/config` y `/backend/config.php` respondan 403 (CP-47 en producción).
+- [x] 4. Escríbele a Claude Code "subido": revisa desde afuera la tienda, la versión de `login.php` y que `/arquitectura/`, `/tests/`, `/docs/`, `/BD_v2/`, `/.git/config` y `/backend/config.php` respondan 403 (CP-47 en producción).
 
 **Si algo falla:** si el sitio no carga después de B.3, vuelve a subir a `backend` los archivos `entorno.php` y `pagina_publica.php` juntos, y avísale a Claude Code.
 

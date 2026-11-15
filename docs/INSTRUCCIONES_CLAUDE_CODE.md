@@ -24,7 +24,7 @@ Archivos que usas: `CLAUDE.md`, `docs/PLAN_PRODUCCION.md` (tareas), `docs/FIX_AS
 3. **Entre commits no pidas permiso:** edita, crea archivos y prueba sin preguntar. Solo te detienes en: (a) un punto de commit, (b) una ACCIÓN TUYA que bloquea la tarea actual, (c) un error que no puedas resolver tras 2 intentos.
 4. **ACCIÓN TUYA:** si algo solo lo puede hacer Vicente (hPanel, phpMyAdmin, OpenAI, Mercado Pago, datos de GMG, archivos del profe, subir al hosting), escribe pasos numerados y exactos, agrégalo a `docs/PENDIENTES_VICENTE.md` y **sigue con la siguiente tarea que no dependa de eso**. Solo esperas si nada más puede avanzar.
 5. **Decisiones del Product Owner pendientes:** aplica la recomendación del plan (E3-H4 reescrita como retiro por WhatsApp; E6-H5 descartada; E5-H14 Telegram descartada; sugerencias del buscador con 2 caracteres y 6 resultados) y anótalo en el plan.
-6. **Nada se da por hecho sin probarlo.** `php -l` en cada PHP tocado; pruebas de `docs/referencia/` cuando toques la búsqueda; si algo necesita la IA real o el servidor, prepara el caso de prueba y márcalo "pendiente de probar en servidor".
+6. **Nada se da por hecho sin probarlo.** `php -l` en cada PHP tocado; pruebas de `tests/chat_busqueda_*` cuando toques la búsqueda; si algo necesita la IA real o el servidor, prepara el caso de prueba y márcalo "pendiente de probar en servidor".
 7. **Al terminar cada tarea:** marca `[x]` en `docs/PLAN_PRODUCCION.md` con "Probado: ...". Al cerrar cada fase, agrega una línea "Estado al <fecha y hora>" para poder retomar después de `/clear`.
 8. Respeta todo `CLAUDE.md`: no leer `.env`, no tocar Mercado Pago, sin frameworks, sentencias preparadas, CSRF, escapar salidas, sin guiones largos en los textos.
 

@@ -25,14 +25,17 @@ Fecha de término del proyecto: 18-12-2026.
 | `backend/` | Lógica: `config.php`, `entorno.php` (lee `.env`), `datos.php` (consultas), `chat*.php` (asistente), `admin_ui.php` (CSRF y cabecera del panel) |
 | `js/`, `css/` | `chat.js`, `cart.js`, `tienda.js`, `model-carousel.js` y sus estilos |
 | `BD_v2/` | Scripts SQL numerados (`01_estructura.sql`, `02_datos_catalogo.sql`, ...) y `catalogo_repuestos.csv` |
-| `docs/` | Plan, fix de la IA y código de referencia probado (`docs/referencia/`) |
+| `docs/` | Plan, fix de la IA y lo que falta integrar de la referencia (`docs/referencia/`) |
+| `tests/` | Pruebas automáticas (búsqueda del chat, CP-42, CP-47) y Apache de prueba (no se publica) |
 | `arquitectura/` | Documentación 4+1 en HTML (no se publica) |
 
 ## Comandos útiles
 
 - Revisar sintaxis de un archivo: `php -l ruta/archivo.php`
-- Pruebas de la búsqueda del chat: `php docs/referencia/chat_busqueda_test.php`
-- Búsqueda contra el catálogo real (necesita `pdo_sqlite`): `php docs/referencia/chat_busqueda_sqlite_test.php BD_v2/catalogo_repuestos.csv`
+- Pruebas de la búsqueda del chat: `php tests/chat_busqueda_test.php`
+- Búsqueda contra el catálogo real (necesita `pdo_sqlite`): `php tests/chat_busqueda_sqlite_test.php BD_v2/catalogo_repuestos.csv`
+- Búsqueda, historial y límites contra MariaDB local (no deja cambios): `php tests/chat_busqueda_mariadb_test.php`
+- CSRF del panel (CP-42): `bash tests/cp42_csrf_panel.sh`; bloqueos del `.htaccess` con Apache real (CP-47): `bash tests/cp47_htaccess.sh`
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).
 
 ## Reglas que no se rompen

@@ -74,4 +74,36 @@ function gmgAplicarSeguridadConexion() {
     header('Referrer-Policy: strict-origin-when-cross-origin');
 }
 
+/**
+ * Límite de solicitudes por IP con ventana fija (RNF-035, E10-H3).
+ * Requiere la tabla limites_solicitudes (BD_v2/05_tablas_panel.sql).
+ * Devuelve true si la IP ya superó el máximo en la ventana actual.
+ */
+function gmgLimiteSuperado(mysqli $conexion, string $accion, int $maximo, int $segundos): bool {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'sin-ip';
+    $clave = substr($accion, 0, 30) . ':' . hash('sha256', $ip);
+    $ahora = time();
+    $limiteVentana = $ahora - $segundos;
+    $stmt = $conexion->prepare("INSERT INTO limites_solicitudes (clave, ventana_inicio, contador) VALUES (?, ?, 1)
+        ON DUPLICATE KEY UPDATE
+            contador = IF(ventana_inicio <= ?, 1, contador + 1),
+            ventana_inicio = IF(ventana_inicio <= ?, ?, ventana_inicio)");
+    if (!$stmt) {
+        // Sin la tabla no se puede contar: se deja pasar y se avisa en el log.
+        error_log('[GMG Límites] No se pudo registrar la solicitud: ' . $conexion->error);
+        return false;
+    }
+    $stmt->bind_param('siiii', $clave, $ahora, $limiteVentana, $limiteVentana, $ahora);
+    $stmt->execute();
+    $stmt->close();
+
+    $stmt = $conexion->prepare("SELECT contador FROM limites_solicitudes WHERE clave = ?");
+    $stmt->bind_param('s', $clave);
+    $stmt->execute();
+    $fila = $stmt->get_result()->fetch_row();
+    $contador = (int)($fila[0] ?? 0);
+    $stmt->close();
+    return $contador > $maximo;
+}
+
 gmgAplicarSeguridadConexion();

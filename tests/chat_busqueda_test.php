@@ -1,5 +1,9 @@
 <?php
-require __DIR__ . '/chat_busqueda_ref.php';
+/**
+ * Pruebas de las funciones puras de backend/chat_busqueda.php (sin base de datos ni red).
+ * Uso: php tests/chat_busqueda_test.php   (termina en "TODO OK")
+ */
+require __DIR__ . '/../backend/chat_busqueda.php';
 
 $fallas = 0;
 function igual($obtenido, $esperado, $nombre) {

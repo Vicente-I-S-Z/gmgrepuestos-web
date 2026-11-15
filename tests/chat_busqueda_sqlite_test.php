@@ -5,12 +5,12 @@
  * como utf8mb4_unicode_ci, así que los textos se guardan sin tildes para
  * imitar esa intercalación.
  *
- * Uso: php docs/referencia/chat_busqueda_sqlite_test.php BD_v2/catalogo_repuestos.csv
+ * Uso: php tests/chat_busqueda_sqlite_test.php BD_v2/catalogo_repuestos.csv
  * (el stock se inventa: 1 de cada 4 repuestos queda en 0)
  */
-require __DIR__ . '/chat_busqueda_ref.php';
+require __DIR__ . '/../backend/chat_busqueda.php';
 
-$csv = $argv[1] ?? __DIR__ . '/../../BD_v2/catalogo_repuestos.csv';
+$csv = $argv[1] ?? __DIR__ . '/../BD_v2/catalogo_repuestos.csv';
 $db = new PDO('sqlite::memory:');
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $db->exec("CREATE TABLE categorias (id_categoria INTEGER PRIMARY KEY, nombre TEXT);
@@ -84,3 +84,4 @@ foreach ($casos as $nombre => [$args, $esperado]) {
     printf("%s %-45s [%s] %d res. 1ro: %s\n", $ok ? 'ok  ' : 'FALLA', $nombre, $modo, count($res), $primero);
 }
 echo $fallas === 0 ? "\nTODO OK\n" : "\n$fallas FALLAS\n";
+exit($fallas === 0 ? 0 : 1);
