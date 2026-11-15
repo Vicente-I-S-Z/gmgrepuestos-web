@@ -16,5 +16,5 @@ paths:
 - Un error de la API nunca se guarda como mensaje del bot.
 - Presupuesto de 25 s por mensaje, máximo 2 rondas de herramientas, 1 reintento ante 0, 429 o 5xx.
 - `CHAT_DEBUG` siempre en `false` en lo que se sube; para diagnosticar se usa la sesión de administrador.
-- Al cambiar la búsqueda, correr `php tests/chat_busqueda_test.php`, `php tests/chat_busqueda_sqlite_test.php`, `php tests/chat_busqueda_mariadb_test.php` y `php tests/chat_herramienta_test.php`; deben terminar en "TODO OK".
+- Al cambiar la búsqueda, correr `php tests/chat_busqueda_test.php`, `php tests/chat_busqueda_sqlite_test.php`, `php tests/chat_busqueda_mariadb_test.php` y `php tests/chat_herramienta_test.php`; al cambiar `backend/chat.php` o el flujo con la API, `php tests/chat_historial_test.php` (usa la API falsa `tests/fake_openai.php`). Deben terminar en "TODO OK".
 - Respuestas al cliente: español de Chile, máximo 3 opciones numeradas, con salida a WhatsApp cuando no hay datos.

@@ -367,14 +367,11 @@ function chatArmarMensajesBase($systemPrompt, $historial, $mensaje, $imagenes) {
         ['role' => 'system', 'content' => $systemPrompt],
     ];
 
-    // Historial reciente (solo texto; las fotos no se re-envían en turnos pasados)
-    if (is_array($historial)) {
-        $historialRecortado = array_slice($historial, -8);
-        foreach ($historialRecortado as $turno) {
-            if (empty($turno['texto'])) continue;
-            $rol = (isset($turno['rol']) && $turno['rol'] === 'bot') ? 'assistant' : 'user';
-            $texto = mb_substr((string)$turno['texto'], 0, 1500, 'UTF-8');
-            $mensajes[] = ['role' => $rol, 'content' => $texto];
+    // Historial leído de la base con chatHistorialDesdeBD(): ya viene en orden,
+    // recortado y con los productos que mostró cada respuesta. Solo texto.
+    foreach ($historial as $turno) {
+        if (in_array($turno['role'] ?? '', ['user', 'assistant'], true) && is_string($turno['content'] ?? null) && $turno['content'] !== '') {
+            $mensajes[] = ['role' => $turno['role'], 'content' => $turno['content']];
         }
     }
 

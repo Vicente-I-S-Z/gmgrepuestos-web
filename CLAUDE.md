@@ -36,6 +36,7 @@ Fecha de término del proyecto: 18-12-2026.
 - Búsqueda contra el catálogo real (necesita `pdo_sqlite`): `php tests/chat_busqueda_sqlite_test.php BD_v2/catalogo_repuestos.csv`
 - Búsqueda, historial y límites contra MariaDB local (no deja cambios): `php tests/chat_busqueda_mariadb_test.php`
 - Herramienta `buscar_productos` del chat contra MariaDB (no deja cambios): `php tests/chat_herramienta_test.php`
+- Chat de punta a punta con una API de OpenAI falsa (`tests/fake_openai.php`, sin gastar tokens): `php tests/chat_historial_test.php`
 - CSRF del panel (CP-42): `bash tests/cp42_csrf_panel.sh`; bloqueos del `.htaccess` con Apache real (CP-47): `bash tests/cp47_htaccess.sh`
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).
 

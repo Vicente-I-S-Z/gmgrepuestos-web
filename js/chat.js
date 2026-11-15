@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filesToSend.forEach(item => formData.append('images[]', item.file));
         formData.append('sesion_id', sesionId);
         if (atajo) formData.append('atajo', atajo);
-        formData.append('historial', JSON.stringify(historialParaEnviar()));
+        // El historial ya no se envía: el servidor lo lee de la base (F1-4, INC-05).
 
         try {
             const response = await fetch('backend/chat.php', {
@@ -383,11 +383,6 @@ document.addEventListener('DOMContentLoaded', () => {
             hora: Date.now()
         });
         guardarHistorial(historialConversacion);
-    }
-
-    // Solo texto reciente (sin fotos) para enviar al backend como contexto
-    function historialParaEnviar() {
-        return historialConversacion.slice(-10).map(t => ({ rol: t.rol, texto: t.texto }));
     }
 
     function manejarInicioCheckout() {

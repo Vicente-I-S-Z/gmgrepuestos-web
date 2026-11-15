@@ -29,10 +29,10 @@ if (isset($conexion) && !$conexion->connect_error) {
     }
 }
 
-// 2. Extraer mensaje, imágenes adjuntas, historial y sesión
+// 2. Extraer mensaje, imágenes adjuntas y sesión. El historial NO se recibe del
+//    navegador (se podía inventar un turno falso del bot): se lee de la base (paso 3).
 $mensaje = '';
 $imagenes = []; // cada una: ['base64' => ..., 'mime' => ...]
-$historial = [];
 $sesionId = '';
 $atajo = ''; // botón rápido del chat: buscar, despacho o pagos
 
@@ -45,12 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (isset($_POST['atajo'])) {
         $atajo = trim($_POST['atajo']);
-    }
-    if (isset($_POST['historial'])) {
-        $decodedHist = json_decode($_POST['historial'], true);
-        if (is_array($decodedHist)) {
-            $historial = $decodedHist;
-        }
     }
 
     // Hasta 3 fotos por mensaje: campos images[] (nuevo) o image (compatibilidad)
@@ -77,9 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isset($jsonData['sesion_id'])) {
                 $sesionId = trim($jsonData['sesion_id']);
             }
-            if (isset($jsonData['historial']) && is_array($jsonData['historial'])) {
-                $historial = $jsonData['historial'];
-            }
             if (isset($jsonData['image_base64'])) {
                 $imagenes[] = ['base64' => $jsonData['image_base64'], 'mime' => 'image/jpeg'];
             }
@@ -99,6 +90,10 @@ if (empty($mensaje) && empty($imagenes)) {
 $conversacionId = (isset($conexion) && !$conexion->connect_error && !empty($sesionId))
     ? chatObtenerOCrearConversacion($conexion, $sesionId)
     : null;
+
+// Historial para la IA (E5-H8, E5-H15, INC-05): se lee de la base ANTES de guardar
+// el mensaje nuevo (así no va duplicado) y trae los productos que mostró cada respuesta.
+$historial = $conversacionId ? chatHistorialDesdeBD($conexion, $conversacionId) : [];
 
 if ($conversacionId) {
     chatGuardarMensaje($conexion, $conversacionId, 'user', $mensaje !== '' ? $mensaje : '(foto adjunta)');
@@ -188,8 +183,10 @@ if (!empty(AI_API_KEY)) {
 //    el cliente aceptó implícitamente, no forzamos nada: solo se activa si
 //    la IA agregó [NOTIFICAR_STOCK:ID] explícitamente (ver bot_config.php).
 
+// Solo se guardan las respuestas reales de la IA: un mensaje de error o de "sin
+// clave" no entra al historial (si entrara, la IA lo leería como algo que dijo).
 $mensajeId = null;
-if ($conversacionId) {
+if ($conversacionId && !$errorIA && !empty(AI_API_KEY)) {
     $mensajeId = chatGuardarMensaje($conexion, $conversacionId, 'bot', $respuestaTexto, $repuestosSugeridos);
 }
 

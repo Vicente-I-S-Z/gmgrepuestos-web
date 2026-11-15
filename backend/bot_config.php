@@ -13,7 +13,12 @@ define('AI_API_KEY', gmgEnv('AI_API_KEY', ''));
 
 // 2. Modelo y Endpoint
 define('AI_MODEL', 'gpt-5.6-luna');
-define('AI_API_URL', 'https://api.openai.com/v1/responses');
+// En el ambiente de pruebas (APP_ENV=pruebas) se puede apuntar a una API falsa
+// local con AI_API_URL en el .env (tests/fake_openai.php). En producción
+// siempre es OpenAI, aunque el .env diga otra cosa.
+define('AI_API_URL', gmgAmbiente() === 'pruebas'
+    ? (string)gmgEnv('AI_API_URL', 'https://api.openai.com/v1/responses')
+    : 'https://api.openai.com/v1/responses');
 
 // 3. Parámetros de contacto
 define('WHATSAPP_NUMBER', gmgEnv('WHATSAPP_NUMBER', '56900000000')); // Número real en el .env (con código de país, sin +)

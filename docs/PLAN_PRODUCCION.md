@@ -80,7 +80,9 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 - [x] **F1-3 Nueva `buscar_productos`** (E5-H3, INC-06, RNF-010, RNF-030). `chatEjecutarBusquedaProductos` usa `chatConsultaBusqueda()` (estricta y luego flexible), trae el detalle de los IDs con `gmgSqlProductos()` y agrega `disponibilidad`. Si el modelo no existe, devuelve un `aviso` con la lista de modelos.
   Hecho (14-11) en `backend/chat_helpers.php`: carga `chat_busqueda.php`; `chatEjecutarBusquedaProductos()` según el fix 4.4 (sentencias preparadas, AND y luego OR, orden por relevancia y stock, detalle con `gmgSqlProductos()` en el mismo orden, `disponibilidad` por fila); `chatValidarBusqueda($args, $conexion)` agrega el aviso de modelo inexistente con la lista de `chatModelosCortos()` (y sugiere reintentar con el modelo base, ej. "Swift Sport"); se borró `chatCondicionPalabrasLike()` (armaba SQL con `real_escape_string`); la descripción de la herramienta menciona `disponibilidad` y el `aviso`, y `texto` pide solo la pieza.
   Probado: `php tests/chat_herramienta_test.php` TODO OK (30: validación de datos faltantes y de modelo, 12 búsquedas con el esperado primero y las 13 columnas, disponibilidad según stock, tope de precio, intento de inyección y UNION sin efecto, base sin cambios); botones rápidos de `backend/chat.php` responden con el módulo cargado (log vacío); regresión de las otras 5 pruebas en TODO OK. Pendiente de probar con la IA real (F1-9).
-- [ ] **F1-4 Historial desde la base** (E5-H8, E5-H15, INC-05). Leer con `chatHistorialDesdeBD()` antes de guardar el mensaje nuevo; guardar solo respuestas exitosas; `js/chat.js` deja de enviar `historial` (lo sigue usando solo para pintar la conversación).
+- [x] **F1-4 Historial desde la base** (E5-H8, E5-H15, INC-05). Leer con `chatHistorialDesdeBD()` antes de guardar el mensaje nuevo; guardar solo respuestas exitosas; `js/chat.js` deja de enviar `historial` (lo sigue usando solo para pintar la conversación).
+  Hecho (14-11): `backend/chat.php` ya no lee `historial` del formulario ni del JSON; lo lee de la base con `chatHistorialDesdeBD()` antes de guardar el mensaje del cliente; no guarda la respuesta del bot si la IA falló o no hay clave. `chatArmarMensajesBase()` acepta el formato de la base (`role`/`content`, solo `user` y `assistant`). `js/chat.js` dejó de enviar `historial` (sigue en `localStorage` para pintar). Para probar sin gastar tokens: `AI_API_URL` configurable en el `.env` solo con `APP_ENV=pruebas` (en producción siempre OpenAI; verificado) y una API falsa en `tests/fake_openai.php`.
+  Probado: `php tests/chat_historial_test.php` TODO OK (16, de punta a punta con `backend/chat.php` y la API falsa: CP-36 historial falso por formulario y por JSON no llega a la IA; historial en orden sin duplicar el mensaje actual; `buscar_productos` real con disponibilidad; CP-29 la respuesta anterior llega con sus productos numerados e id; un error de la IA no se guarda ni aparece después; log vacío). `node --check js/chat.js` y `php -l` sin errores; regresión de las otras 6 pruebas en TODO OK. Pendiente con la IA real: F1-9.
 - [ ] **F1-5 Llamada a la API** (E5-H16, E5-H17, INC-01, RNF-012, RNF-014, RNF-015). Usar `chatLlamarResponsesAPI()` de referencia con presupuesto de 25 s; máximo 2 rondas de herramientas; borrar el respaldo sin herramientas, `AI_SYSTEM_PROMPT_FALLBACK`, la carga del catálogo completo en `chat.php` y `chatFiltrarProductosPorTexto`.
 - [ ] **F1-6 Prompt nuevo** (E5-H2, E5-H15, RNF-011, RNF-016). Reemplazar `AI_SYSTEM_PROMPT` por el texto del fix.
 - [ ] **F1-7 Carrito desde el chat** (E5-H5, E5-H6, RF-040). `[ADD_TO_CART]` acepta solo IDs de `chatIdsMostrados()` más los de este turno. Tarjetas con disponibilidad y botón "Ver ficha" (enlaza a `producto.php` cuando exista); quitar el `onclick` en línea y usar `data-*` con `addEventListener`.
@@ -163,11 +165,13 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 
 ## Decisiones del Product Owner (antes de la Fase 2)
 
-- [ ] E3-H4: reescribir como "retiro y coordinación por WhatsApp" (GMG no hace envíos) o descartarla.
-- [ ] E6-H5: marcarla "Descartada" (pantalla eliminada a propósito) o cubrirla con un filtro de respuestas con valoración negativa.
-- [ ] E5-H14 (Telegram, 8 pts, Baja): descartar o mover a "alcance ampliado".
-- [ ] Prioridad Baja de la Fase 4 (E1-H6, E1-H7, E6-H11, E6-H12): entran solo si sobra tiempo.
-- [ ] Sugerencias del buscador: 2 caracteres y 6 resultados (código y plan de pruebas) o 3 y 8 (SRS).
+Aplicadas el 14-11 con la recomendación del plan (`docs/INSTRUCCIONES_CLAUDE_CODE.md` regla 5; Vicente no objetó al presentárselas):
+
+- [x] E3-H4: reescribir como "retiro y coordinación por WhatsApp" (GMG no hace envíos) o descartarla. **Decisión: se reescribe** como retiro y coordinación por WhatsApp.
+- [x] E6-H5: marcarla "Descartada" (pantalla eliminada a propósito) o cubrirla con un filtro de respuestas con valoración negativa. **Decisión: Descartada.**
+- [x] E5-H14 (Telegram, 8 pts, Baja): descartar o mover a "alcance ampliado". **Decisión: Descartada.**
+- [x] Prioridad Baja de la Fase 4 (E1-H6, E1-H7, E6-H11, E6-H12): entran solo si sobra tiempo. **Decisión: así se aplica (F4-10).**
+- [x] Sugerencias del buscador: 2 caracteres y 6 resultados (código y plan de pruebas) o 3 y 8 (SRS). **Decisión: 2 caracteres y 6 resultados**; el SRS se alinea en F5-7.
 
 ## Hallazgos fuera de tarea (anotados, no corregidos)
 
