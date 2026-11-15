@@ -39,6 +39,8 @@ Fecha de término del proyecto: 18-12-2026.
 - Chat de punta a punta con una API de OpenAI falsa (`tests/fake_openai.php`, sin gastar tokens): `php tests/chat_historial_test.php` (historial), `php tests/chat_api_test.php` (tiempos, reintento, rondas y carrito; tarda unos 40 s) y `php tests/chat_abuso_test.php` (fotos, campos y límite por IP)
 - CSRF del panel (CP-42): `bash tests/cp42_csrf_panel.sh`; bloqueos del `.htaccess` con Apache real (CP-47): `bash tests/cp47_htaccess.sh`
 - Tarjetas del chat en un navegador real (Edge o Chrome sin ventana, con captura a 360 px): `php tests/chat_tarjetas_test.php`
+- Disponibilidad en las tarjetas de la tienda: `php tests/tienda_disponibilidad_test.php`
+- Ver una página a 360 px reales con Edge sin ventana (no baja de unos 500 px): abrir `/tests/vista_ancho.html?ancho=360&url=/index.php%3Fq%3Dfiltro` y sacar la captura
 - Asistente con la IA REAL (gasta la clave del `.env` local; pedir permiso a Vicente antes): `php tests/chat_ia_real_test.php --confirmo-gasto` (informe en `docs/evidencias/resultados_F1-9.md`)
 - Servidor local: `php -S localhost:8000` desde esta carpeta, con una base local cargada desde `BD_v2/` y un `.env` de pruebas (`APP_ENV=pruebas`).
 

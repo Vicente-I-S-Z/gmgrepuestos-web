@@ -1328,6 +1328,29 @@ main > h2::before {
     transform: translateY(-1px);
 }
 
+/* Sin stock (F2-1): el botón queda deshabilitado y no reacciona al pasar el mouse */
+.btn-add-cart:disabled,
+.btn-add-cart:disabled:hover {
+    background-color: #E0E0E0;
+    color: #616161;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Disponibilidad (RF-013), compartida por la tienda y el chat: contraste de 4,5:1 o más */
+.gmg-disponibilidad {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+.gmg-disponibilidad--ok { background: #E8F5E9; color: #1B5E20; }
+.gmg-disponibilidad--pocas { background: #FFF3E0; color: #8A4B00; }
+.gmg-disponibilidad--agotado { background: #FFEBEE; color: #B71C1C; }
+.producto-card .gmg-disponibilidad { align-self: flex-start; margin: 0 0 10px; font-size: 0.75rem; }
+
 /* =========================================================
    Carrito: selección múltiple, guardar para después,
    productos relacionados y código de descuento

@@ -112,7 +112,9 @@ Especificación completa y código probado en `docs/FIX_ASISTENTE_IA.md`.
 
 ## Fase 2: catálogo, stock y ficha (23 a 29-11)
 
-- [ ] **F2-1 Disponibilidad en la tienda** (E2-H6, E2-H1, RF-013). Tarjetas con "Disponible", "Últimas unidades" (stock 3 o menos) o "Sin stock"; botón de compra deshabilitado con stock 0. Reutilizar `chatDisponibilidad()`.
+- [x] **F2-1 Disponibilidad en la tienda** (E2-H6, E2-H1, RF-013). Tarjetas con "Disponible", "Últimas unidades" (stock 3 o menos) o "Sin stock"; botón de compra deshabilitado con stock 0. Reutilizar `chatDisponibilidad()`.
+  Hecho (15-11) en `index.php`: etiqueta con `chatDisponibilidad()` (carga `backend/chat_busqueda.php`), la tarjeta lleva `data-producto-id`, y sin stock queda un solo botón deshabilitado "Sin stock" (sin "Comprar ahora"; F3-11 le sumará el aviso de reposición). `.gmg-disponibilidad` pasó de `css/chat.css` a `css/style.css` (la comparten tienda y chat) y se agregó el estilo deshabilitado de `.btn-add-cart`. Nueva `tests/vista_ancho.html` para ver una página a 360 px reales (Edge sin ventana no baja de unos 500 px y recortaba la captura).
+  Probado: `php tests/tienda_disponibilidad_test.php` TODO OK (5: en `?modelo=swift`, `?q=filtro` y `?categoria=Frenos`, las 252 tarjetas tienen la etiqueta que corresponde al stock de la base y sus botones; aparecen los 3 estados; log vacío); capturas a 360 px (en iframe) y 1366 px revisadas; regresión `chat_tarjetas_test` (19) y `cp47_htaccess` (56) en TODO OK.
 - [ ] **F2-2 Stock en carrito y checkout** (E3-H2, E3-H6, INC-10, RF-020, RF-024). El carrito no deja superar el stock. En `checkout.php`, antes de crear el pedido, validar stock dentro de la transacción (`SELECT ... FOR UPDATE`). No tocar la parte de Mercado Pago.
   Listo cuando: CP-15 exitoso.
 - [ ] **F2-3 Descuento de stock** (E4-H3, RF-033). Al pasar un pedido a "aprobado" en `admin/pedidos.php`, descontar stock una sola vez (idempotente) y auditarlo.

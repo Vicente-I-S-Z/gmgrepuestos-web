@@ -3,6 +3,7 @@ require_once 'backend/config.php';
 require_once 'backend/modelos.php';
 require_once 'backend/datos.php';
 require_once 'backend/pagina_publica.php';
+require_once 'backend/chat_busqueda.php'; // chatDisponibilidad(): misma etiqueta de stock que el asistente
 
 $productos = [];
 $mostrarSelector = true; // Por defecto mostramos las tarjetas de autos
@@ -222,8 +223,12 @@ gmgCabeceraPublica([
                         if (!empty($producto['imagen_url_2'])) { $imagenes[] = $producto['imagen_url_2']; }
                         if (!empty($producto['imagen_url_3'])) { $imagenes[] = $producto['imagen_url_3']; }
                         $numImagenes = count($imagenes);
+                        // Disponibilidad (RF-013, E2-H6): "Disponible", "Últimas unidades" (3 o menos) o "Sin stock".
+                        $disponibilidad = chatDisponibilidad((int)$producto['stock']);
+                        $agotado = $disponibilidad === 'Sin stock';
+                        $claseDisponibilidad = $agotado ? 'agotado' : ($disponibilidad === 'Últimas unidades' ? 'pocas' : 'ok');
                     ?>
-                    <div class="producto-card">
+                    <div class="producto-card" data-producto-id="<?php echo (int)$producto['id']; ?>">
                         <div class="producto-img-wrap">
                             <?php foreach ($imagenes as $i => $urlImagen): ?>
                                 <img src="<?php echo htmlspecialchars($urlImagen); ?>" alt="<?php echo htmlspecialchars($producto['nombre']); ?>" class="producto-img<?php echo $i === 0 ? ' producto-img-activa' : ''; ?>" data-index="<?php echo $i; ?>" loading="lazy" onerror="this.onerror=null;this.src='img/placeholder-repuesto.svg';">
@@ -258,8 +263,12 @@ gmgCabeceraPublica([
                                 <?php endif; ?>
                             </div>
                             <div class="producto-precio">$<?php echo number_format($producto['precio'], 0, ',', '.'); ?> CLP</div>
+                            <span class="gmg-disponibilidad gmg-disponibilidad--<?php echo $claseDisponibilidad; ?>"><?php echo gmgH($disponibilidad); ?></span>
 
                             <div class="producto-acciones">
+                                <?php if ($agotado): ?>
+                                <button type="button" class="btn-add-cart" disabled>Sin stock</button>
+                                <?php else: ?>
                                 <button class="btn-add-cart"
                                         data-id="<?php echo htmlspecialchars($producto['id']); ?>"
                                         data-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>"
@@ -276,6 +285,7 @@ gmgCabeceraPublica([
                                         data-categoria="<?php echo htmlspecialchars($producto['categoria']); ?>">
                                     ⚡ Comprar ahora
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

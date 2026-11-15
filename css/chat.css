@@ -309,18 +309,7 @@
     color: #D32F2F;
 }
 
-/* Disponibilidad (RF-013): contraste de 4,5:1 o más en los tres estados */
-.gmg-disponibilidad {
-    display: inline-block;
-    margin-top: 4px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-}
-.gmg-disponibilidad--ok { background: #E8F5E9; color: #1B5E20; }
-.gmg-disponibilidad--pocas { background: #FFF3E0; color: #8A4B00; }
-.gmg-disponibilidad--agotado { background: #FFEBEE; color: #B71C1C; }
+/* La etiqueta de disponibilidad (.gmg-disponibilidad) está en style.css: la comparten la tienda y el chat */
 
 /* Acciones de la tarjeta: áreas táctiles de 44 px */
 .gmg-chat-product-actions {
