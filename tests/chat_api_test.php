@@ -38,6 +38,16 @@ try {
     $mayor = max(array_column(peticiones($e), 'bytes'));
     revisar($mayor < 30000, 'ninguna petición lleva el catálogo completo', "la más grande: $mayor bytes");
 
+    echo "\n== Prompt que recibe la IA (F1-6) ==\n";
+    $sistema = ($p1['input'][0]['role'] ?? '') === 'system' ? (string)$p1['input'][0]['content'] : '';
+    foreach (['CÓMO HABLAR', '"wena"', 'BUSCAR PRODUCTOS (obligatorio)', 'FOTOS', '[ADD_TO_CART:ID:CANTIDAD]', '[NOTIFICAR_STOCK:ID]',
+              'BASE DE CONOCIMIENTO DE LA TIENDA', 'REGLA DE MODELO Y AÑO', 'MODELOS SUZUKI QUE EXISTEN HOY'] as $marca) {
+        revisar(strpos($sistema, $marca) !== false, "el mensaje de sistema incluye $marca");
+    }
+    revisar(strpos($sistema, 'REGLA CRÍTICA DE CONTEXTO') === false && stripos($sistema, 'DEBES responder que no has entendido') === false,
+            'ya no trae la regla que empujaba a "no entendí" (causa 6)');
+    revisar(strpos($sistema, 'Despacho y entrega: GMG Repuestos no realiza envíos propios') !== false, 'la base de conocimiento lleva los textos configurados');
+
     echo "\n== Ronda de herramienta ==\n";
     revisar(count($p) === 2, 'pedir pastillas genera 2 peticiones (pregunta y resultado)', count($p) . ' peticiones');
     $tipos = array_column($p[1]['input'] ?? [], 'type');
