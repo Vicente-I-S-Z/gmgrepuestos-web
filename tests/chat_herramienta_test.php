@@ -24,6 +24,8 @@ function revisar(bool $ok, string $nombre, string $detalle = ''): void {
     echo ($ok ? 'ok    ' : 'FALLA ') . $nombre . ($detalle !== '' ? "  ($detalle)" : '') . "\n";
 }
 
+$firmaStock = fn() => $conexion->query("SELECT CONCAT(COUNT(*), '/', SUM(stock), '/', SUM(stock * id_repuesto)) FROM repuestos")->fetch_row()[0];
+$stockAntes = $firmaStock();
 $conexion->begin_transaction();
 try {
     // Stock de prueba: 1 de cada 4 en 0, uno con 2 unidades (se deshace al final).
@@ -97,8 +99,7 @@ try {
     $conexion->rollback();
 }
 
-$stockActual = (int)$conexion->query("SELECT SUM(stock) FROM repuestos")->fetch_row()[0];
 echo "\n";
-revisar($stockActual === 0 || $base !== 'gmg_local', 'la base quedó igual (transacción deshecha)', "stock total $stockActual");
+revisar($firmaStock() === $stockAntes, 'la base quedó igual (transacción deshecha)', 'stock antes y después: ' . $stockAntes);
 echo $fallas === 0 ? "\nTODO OK\n" : "\n$fallas FALLAS\n";
 exit($fallas === 0 ? 0 : 1);

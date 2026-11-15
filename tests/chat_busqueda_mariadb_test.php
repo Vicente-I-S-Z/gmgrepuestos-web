@@ -141,8 +141,10 @@ try {
     $conexion->rollback();
 }
 
+// Solo las filas de las IP inventadas de esta prueba (la base puede tener contadores reales del chat local).
+$hashesPrueba = "'" . hash('sha256', '203.0.113.7') . "', '" . hash('sha256', '198.51.100.9') . "'";
 $residuo = (int)$conexion->query("SELECT COUNT(*) FROM conversaciones_chat WHERE sesion_id = 'prueba-mariadb-f12'")->fetch_row()[0]
-         + (int)$conexion->query("SELECT COUNT(*) FROM limites_solicitudes WHERE clave LIKE 'chat:%' OR clave LIKE 'codigo:%'")->fetch_row()[0];
+         + (int)$conexion->query("SELECT COUNT(*) FROM limites_solicitudes WHERE SUBSTRING_INDEX(clave, ':', -1) IN ($hashesPrueba)")->fetch_row()[0];
 echo "\n";
 revisar($residuo === 0, 'la base quedó igual (transacción deshecha)');
 echo $fallas === 0 ? "\nTODO OK\n" : "\n$fallas FALLAS\n";

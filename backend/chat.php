@@ -147,6 +147,7 @@ if (!empty(AI_API_KEY)) {
         $autoAddCart = chatExtraerAddToCart($respuestaTexto, $productosPermitidos);
         $startCheckout = chatExtraerStartCheckout($respuestaTexto);
         $notificarStockProductoId = chatExtraerNotificarStock($respuestaTexto);
+        $respuestaTexto = chatLimpiarRespuesta($respuestaTexto);
 
         if (defined('CHAT_DEBUG') && CHAT_DEBUG) {
             $modo = $respuestaAPI['debug_modo'] ?? 'desconocido';

@@ -283,6 +283,19 @@ function chatExtraerAddToCart(&$texto, $productos) {
     return $autoAddCart;
 }
 
+/**
+ * Limpia la respuesta de la IA antes de mostrarla y guardarla (hallazgo de F1-9):
+ * - quita la línea interna "[Productos mostrados en esta respuesta: ...]", que la IA
+ *   a veces imita del historial (el cliente nunca debe verla; el historial la agrega solo);
+ * - cambia los guiones largos por comas (estilo del sitio, CLAUDE.md).
+ */
+function chatLimpiarRespuesta(string $texto): string {
+    $texto = preg_replace('/[ \t]*\[Productos mostrados en esta respuesta:[^\]]*\]/u', '', $texto);
+    $texto = preg_replace('/(?<=\S)[ \t]*—[ \t]*(?=\S)/u', ', ', $texto); // solo dentro de una línea
+    $texto = str_replace('—', '-', $texto);
+    return trim(preg_replace("/[ \t]+\n/u", "\n", $texto));
+}
+
 function chatExtraerStartCheckout(&$texto) {
     $encontrado = (bool)preg_match('/\[START_CHECKOUT\]/i', $texto);
     if ($encontrado) {

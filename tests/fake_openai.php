@@ -15,6 +15,7 @@
  *   - "incompleta": status "incomplete" con texto cortado;
  *   - "lento": espera FAKE_API_DEMORA segundos (5 por defecto) y responde texto;
  *   - "agrega N": responde con la etiqueta [ADD_TO_CART:N:1];
+ *   - "eco interno": responde con guiones largos y la línea interna "[Productos mostrados...]";
  *   - "pastillas": pide la herramienta buscar_productos (Swift 2019, pastillas de freno);
  *   - cualquier otra cosa: un mensaje de texto.
  */
@@ -91,6 +92,9 @@ if (stripos($ultimoUsuario, 'incompleta') !== false) {
 if (stripos($ultimoUsuario, 'lento') !== false) {
     sleep((int)(getenv('FAKE_API_DEMORA') ?: 5));
     responder(mensaje('Respuesta lenta (respuesta falsa).'));
+}
+if (stripos($ultimoUsuario, 'eco interno') !== false) { // la IA real a veces imita la línea interna del historial
+    responder(mensaje("1. **Pastillas** — SKU: FRE-SWI3-PDL — **\$24.000** — Disponible\n[Productos mostrados en esta respuesta: 242]"));
 }
 if (preg_match('/agrega (\d+)/i', $ultimoUsuario, $m)) {
     responder(mensaje("Listo, lo agrego al carrito. [ADD_TO_CART:{$m[1]}:1]"));

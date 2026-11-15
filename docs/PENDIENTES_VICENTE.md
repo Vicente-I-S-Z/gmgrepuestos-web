@@ -205,7 +205,7 @@ Son extensiones de terceros que pide el plan (Ponytail para el backend, Emil Kow
 
 ## 15. Diagnóstico del chat en producción (F1-1) y prueba de la clave nueva (F0-2, C.3)
 
-No bloquea: Claude Code avanza con F1-2 a F1-8 en local.
+Cambio del 15-11: el chat nuevo ya pasó la prueba con la IA real en local (punto 17). Este diagnóstico ahora se hace **después de subir la Fase 1** (punto 17, paso C): sirve para confirmar que en producción responde y que la clave de producción funciona. Si antes de subir quieres ver el error del chat antiguo, puedes hacerlo igual.
 
 - [ ] 1. Inicia sesión en https://gmgrepuestos.cl/admin. En la misma ventana abre la tienda, abre el chat y escribe "pastillas de freno para Swift 2019". Copia la respuesta completa (si hay error, trae una línea `[DEBUG]`).
 - [ ] 2. hPanel > Avanzado > Registros de errores: copia las últimas líneas que digan `[GMG Chat]`.
@@ -214,3 +214,38 @@ No bloquea: Claude Code avanza con F1-2 a F1-8 en local.
   SELECT clave, CHAR_LENGTH(contenido) AS largo FROM base_conocimiento;
   ```
 - [ ] 4. Pásale a Claude Code lo de 1, 2 y 3, y confirma que revocaste la clave antigua de OpenAI (punto 7, C.4).
+
+## 16. Plan de Pruebas v2 (para completar F1-9 y para F5-1)
+
+- [ ] 1. Busca `Plan_de_Pruebas_GMG_Repuestos_v2.docx` (en Drive, carpeta Capstone 2026) y déjalo en `C:\Users\santi\Desktop\Gmgrepuestos\docs\evidencias\`, o pásale la ruta a Claude Code.
+- Con él, Claude Code agrega a `tests/chat_ia_real_test.php` los casos que faltan (EV-05, EV-08, EV-09 y CP-24 a CP-35, salvo CP-28 y CP-29) y registra los resultados con sus códigos oficiales.
+
+## 17. Subir la Fase 1 a Hostinger (asistente IA nuevo)
+
+Probado en local con la IA real el 15-11: 39 de 39 casos correctos, producto correcto en el top 3 en el 100%, 0 precios o SKU inventados, p90 de 3,9 s (`docs/evidencias/resultados_F1-9.md`).
+Archivos listos en `C:\Users\santi\Desktop\Gmgrepuestos\dist\subida_fase1\` (9, idénticos al proyecto). **No hay SQL que ejecutar** (`limites_solicitudes` ya existe en producción). Mismo método seguro de la Fase 0: archivos sueltos por carpeta, nunca "Extraer".
+
+**A. Antes de subir: revisar el `.env` de producción** (Administrador de archivos > `domains/gmgrepuestos.cl/.env` > Editar, solo mirar):
+
+- [ ] 1. `AI_API_KEY` tiene la clave nueva de producción.
+- [ ] 2. `WHATSAPP_NUMBER` tiene el número real de la tienda (569XXXXXXXX). Si no está, el chat ofrece `wa.me/56900000000`, que no existe. Si falta, agrégalo.
+- [ ] 3. `APP_ENV` dice `produccion` (si dice `pruebas`, cámbialo).
+
+**B. Subir (cada carpeta en una sola subida, aceptando reemplazar)**
+
+- [ ] 1. `public_html/backend`: los 6 de `dist\subida_fase1\backend\` **juntos** (`.htaccess`, `bot_config.php`, `chat.php`, `chat_busqueda.php`, `chat_helpers.php`, `seguridad.php`). Van juntos porque se usan entre sí.
+- [ ] 2. `public_html/backend/parciales`: `widgets_tienda.php`.
+- [ ] 3. `public_html/js`: `chat.js`.
+- [ ] 4. `public_html/css`: `chat.css`.
+- [ ] 5. Revisa los tamaños: `backend/.htaccess` 919 B, `bot_config.php` 4.19 KiB, `chat.php` 9.44 KiB, `chat_busqueda.php` 12.38 KiB, `chat_helpers.php` 22.79 KiB, `seguridad.php` 4.33 KiB, `parciales/widgets_tienda.php` 12.47 KiB, `js/chat.js` 34.56 KiB, `css/chat.css` 15.39 KiB.
+
+**C. Probar en el sitio real**
+
+- [ ] 1. https://gmgrepuestos.cl carga normal. Recarga con Ctrl+F5 para que el navegador tome el `chat.js` nuevo.
+- [ ] 2. Inicia sesión en /admin y, en la misma ventana, escribe al chat "pastillas de freno para Swift 2019". Debe responder con opciones y tarjetas. Si aparece `[DEBUG]`, copia esa línea y pásasela a Claude Code (esto cierra F1-1).
+- [ ] 3. Escribe "wena, necesito las balatas pal swift 2019": debe entenderlo y mostrar opciones.
+- [ ] 4. Escribe "agrega el segundo": debe agregarlo al carrito.
+- [ ] 5. Si las tarjetas salen todas "Sin stock", es el stock real de producción en 0 (punto 13), no un error del chat.
+- [ ] 6. Escríbele a Claude Code "subida fase 1": revisa desde afuera que `/backend/chat_busqueda.php` responda 403 y que el sitio siga en pie.
+
+**Si algo falla:** vuelve a subir a `backend` los 6 archivos juntos; si sigue fallando, avísale a Claude Code (el respaldo de `public_html` de la Fase 0 sirve para volver atrás).

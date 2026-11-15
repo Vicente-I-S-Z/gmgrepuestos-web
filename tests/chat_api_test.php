@@ -66,6 +66,14 @@ try {
     [$r] = turno($e, "agrega $idPastillas", 'otra-sesion-' . uniqid());
     revisar(($r['auto_add_cart'] ?? null) === [], 'en otra conversación ese mismo id no agrega nada');
 
+    echo "\n== Respuesta limpia para el cliente (hallazgo de F1-9) ==\n";
+    [$r] = turno($e, 'eco interno', $sesion);
+    $texto = $r['reply'] ?? '';
+    revisar(strpos($texto, '[Productos mostrados') === false, 'la línea interna "[Productos mostrados...]" no llega al cliente');
+    revisar(strpos($texto, '—') === false && strpos($texto, '**Pastillas**, SKU: FRE-SWI3-PDL, **$24.000**, Disponible') !== false, 'los guiones largos se cambian por comas', $texto);
+    $guardado = (string)$e['db']->query("SELECT contenido FROM mensajes_chat WHERE rol = 'bot' ORDER BY id_mensaje DESC LIMIT 1")->fetch_row()[0];
+    revisar($guardado === $texto, 'en la base queda la misma respuesta limpia');
+
     echo "\n== Máximo 2 rondas de herramientas (E5-H17) ==\n";
     $antes = bots($e, $sesion);
     [$r, $p] = turno($e, 'insiste en buscar', $sesion);
