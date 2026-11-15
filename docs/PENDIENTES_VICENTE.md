@@ -120,12 +120,14 @@ Decisión de Vicente (14-11): no se reordena. Fases 1 y 2 ya las revisó el prof
 
 ## 9. Ejecutar `BD_v2/05_tablas_panel.sql` en producción (F0-3)
 
+Hecho: la exportación del 15-11 muestra `limites_solicitudes` en producción.
+
 Es seguro: probado en local contra una copia de la estructura de producción. Solo crea la tabla nueva `limites_solicitudes`; las 3 tablas que ya existen y los textos del panel "Asistente" no se tocan.
 
-- [ ] 1. phpMyAdmin de producción > selecciona la base del sitio (columna izquierda).
-- [ ] 2. Pestaña "Importar" > "Seleccionar archivo" > `C:\Users\santi\Desktop\Gmgrepuestos\BD_v2\05_tablas_panel.sql` > botón "Importar" (abajo).
-- [ ] 3. Debe terminar en verde. Si aparecen avisos de "Table already exists", es lo esperado.
-- [ ] 4. Pestaña SQL, ejecuta `SHOW TABLES LIKE 'limites_solicitudes';`: debe salir 1 fila.
+- [x] 1. phpMyAdmin de producción > selecciona la base del sitio (columna izquierda).
+- [x] 2. Pestaña "Importar" > "Seleccionar archivo" > `C:\Users\santi\Desktop\Gmgrepuestos\BD_v2\05_tablas_panel.sql` > botón "Importar" (abajo).
+- [x] 3. Debe terminar en verde. Si aparecen avisos de "Table already exists", es lo esperado.
+- [x] 4. Pestaña SQL, ejecuta `SHOW TABLES LIKE 'limites_solicitudes';`: debe salir 1 fila.
 
 ## 10. Textos reales del asistente (F0-7)
 
@@ -137,9 +139,11 @@ En producción, horario, dirección ("Av. Providencia 1234"), teléfono ("+56 9 
 
 ## 11. Estructura completa de la base de producción (para cerrar F0-3)
 
+Hecho el 15-11: la única diferencia era `pedidos.metodo_entrega`, que ahora crea `BD_v2/06_metodo_entrega.sql` (en producción no hace falta ejecutarlo).
+
 En producción existe la columna `pedidos.metodo_entrega` (la agregó un script 06 que nunca se guardó en `BD_v2/`) y una base nueva no la tiene. Con la estructura completa Claude Code arma el script que falta y revisa si hay más diferencias. No bloquea: Claude Code sigue con F0-5.
 
-- [ ] 1. phpMyAdmin de producción > selecciona la base del sitio > pestaña "Exportar".
-- [ ] 2. Método: "Personalizado". Formato: SQL.
-- [ ] 3. En "Tablas", deja todas marcadas, pero solo en la columna "Estructura" (desmarca la columna "Datos"). Así el archivo no trae pedidos, clientes ni contraseñas.
-- [ ] 4. Botón "Exportar" (abajo). Adjunta el archivo `.sql` en el chat de Claude Code.
+- [x] 1. phpMyAdmin de producción > selecciona la base del sitio > pestaña "Exportar".
+- [x] 2. Método: "Personalizado". Formato: SQL.
+- [x] 3. En "Tablas", deja todas marcadas, pero solo en la columna "Estructura" (desmarca la columna "Datos"). Así el archivo no trae pedidos, clientes ni contraseñas.
+- [x] 4. Botón "Exportar" (abajo). Adjunta el archivo `.sql` en el chat de Claude Code.
