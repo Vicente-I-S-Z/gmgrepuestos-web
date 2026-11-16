@@ -1,9 +1,0 @@
-# Bloquea el acceso desde el navegador a los scripts SQL y al CSV del
-# catálogo (contienen datos internos, por ejemplo hashes de contraseñas).
-<IfModule mod_authz_core.c>
-    Require all denied
-</IfModule>
-<IfModule !mod_authz_core.c>
-    Order allow,deny
-    Deny from all
-</IfModule>
