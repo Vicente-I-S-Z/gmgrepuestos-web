@@ -20,6 +20,12 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # 0) Una sola dirección: gmgrepuestos.cl -> https://www.gmgrepuestos.cl (301), con la misma ruta y
+    #    parámetros. Es la versión que usan SITE_URL, la URL canónica y el sitemap. Solo afecta a ese
+    #    dominio exacto (no al computador ni a otros subdominios).
+    RewriteCond %{HTTP_HOST} ^gmgrepuestos\.cl(:[0-9]+)?$ [NC]
+    RewriteRule ^ https://www.gmgrepuestos.cl%{REQUEST_URI} [L,R=301,NE]
+
     # 1) HTTPS obligatorio (redirección permanente). No se aplica cuando se
     #    prueba en el computador (localhost) ni cuando el servidor ya recibió
     #    la visita por HTTPS a través de un intermediario.

@@ -9,4 +9,4 @@ Disallow: /mi-pedido.php
 Disallow: /*?q=
 Disallow: /*&q=
 
-Sitemap: https://gmgrepuestos.cl/sitemap.xml
+Sitemap: https://www.gmgrepuestos.cl/sitemap.xml

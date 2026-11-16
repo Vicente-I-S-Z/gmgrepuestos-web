@@ -108,6 +108,16 @@ verificar $? "las tarjetas de la tienda enlazan a URLs legibles"
 curl -s "$U/sitemap.xml" | grep -q "<loc>$U/repuestos/"
 verificar $? "el sitemap usa URLs legibles"
 
+echo "== Una sola dirección (sin www -> www) =="
+SIN_WWW="$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' -H 'Host: gmgrepuestos.cl' "$U/repuestos/swift/x-255?a=1&b=2")"
+[ "$SIN_WWW" = "301 https://www.gmgrepuestos.cl/repuestos/swift/x-255?a=1&b=2" ]
+verificar $? "gmgrepuestos.cl -> 301 a https://www.gmgrepuestos.cl con la misma ruta y parámetros ($SIN_WWW)"
+CON_WWW="$(curl -s -o /dev/null -w '%{redirect_url}' -H 'Host: www.gmgrepuestos.cl' -H 'X-Forwarded-Proto: https' "$U/index.php")"
+[ -z "$CON_WWW" ]
+verificar $? "www.gmgrepuestos.cl por HTTPS no se redirige"
+[ "$(codigo 'index.php')" = "200" ]
+verificar $? "en el computador (127.0.0.1) no hay redirección"
+
 echo "== Rendimiento (F4-7): compresión y caché =="
 cabecera() { # texto esperado en las cabeceras, ruta, descripción
     if curl -s -D - -o /dev/null -H 'Accept-Encoding: gzip' "$U/$2" | grep -qi "$1"; then

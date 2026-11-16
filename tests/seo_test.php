@@ -26,7 +26,7 @@ try {
     revisar(count(preg_grep('~(admin|checkout|login|backend|\?q=)~', $locs)) === 0, 'sin panel, checkout, login ni búsquedas');
     $robots = (string)file_get_contents($s['url'] . '/robots.txt');
     revisar(strpos($robots, 'Disallow: /admin/') !== false && strpos($robots, 'Disallow: /backend/') !== false && strpos($robots, 'Disallow: /checkout.php') !== false
-            && strpos($robots, 'Sitemap: https://gmgrepuestos.cl/sitemap.xml') !== false, 'robots.txt excluye panel, backend y checkout, y anuncia el sitemap');
+            && strpos($robots, 'Sitemap: https://www.gmgrepuestos.cl/sitemap.xml') !== false, 'robots.txt excluye panel, backend y checkout, y anuncia el sitemap');
     $errores = sitioErrores($s);
     revisar($errores === [], 'registro de PHP sin errores', $errores ? trim($errores[0]) : '');
 } finally {
