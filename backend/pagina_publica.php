@@ -121,7 +121,9 @@ function gmgCabeceraPublica(array $o = []) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <?php if (!empty($o['base'])): ?>
-    <base href="<?php echo gmgH(gmgUrlBase()); ?>/">
+    <?php // Solo la ruta (sin dominio): así el CSS y el JS se piden al mismo sitio que abrió el visitante,
+          // con o sin "www". Con el dominio de SITE_URL, la CSP ('self') los bloqueaba al entrar por el otro. ?>
+    <base href="<?php echo gmgH(rtrim((string)parse_url(gmgUrlBase(), PHP_URL_PATH), '/') . '/'); ?>">
 <?php endif; ?>
     <title><?php echo gmgH($titulo); ?></title>
     <meta name="description" content="<?php echo gmgH($descripcion); ?>">

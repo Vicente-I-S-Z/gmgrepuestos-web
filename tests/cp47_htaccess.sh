@@ -95,7 +95,7 @@ LEGIBLE="$(ubicacion 'producto.php?id=255')"
 verificar $? "producto.php?id=255 -> 301 a ${LEGIBLE#$U}"
 RUTA="${LEGIBLE#$U/}"
 FICHA="$(curl -s "$U/$RUTA")"
-[ "$(codigo "$RUTA")" = "200" ] && echo "$FICHA" | grep -q "<base href=\"$U/\">" && echo "$FICHA" | grep -q "rel=\"canonical\" href=\"$LEGIBLE\""
+[ "$(codigo "$RUTA")" = "200" ] && echo "$FICHA" | grep -q "<base href=\"/\">" && echo "$FICHA" | grep -q "rel=\"canonical\" href=\"$LEGIBLE\""
 verificar $? "la URL legible responde 200 con <base> y canonical propia"
 [ "$(codigo 'css/style.css')" = "200" ] && echo "$FICHA" | grep -q 'href="css/style.css'
 verificar $? "los recursos de la ficha siguen siendo relativos a la raíz"
