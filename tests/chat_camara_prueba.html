@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es-CL">
+<head><meta charset="utf-8"><title>Prueba de la cámara del chat</title></head>
+<body style="margin:0">
+<!--
+  Página de prueba de tests/chat_camara_test.php. Carga la tienda real y simula fotos del celular:
+  revisa que "Tomar foto" abra el campo con capture="environment", que una foto grande (más de 4 MB)
+  se reduzca a JPEG de 1600 px antes de enviarse, que una chica pase igual y el máximo de 3. No se publica.
+-->
+<iframe id="sitio" style="width:420px;height:760px;border:0" src="/index.php"></iframe>
+<pre id="resultado">pendiente</pre>
+<script>
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+function lienzoFoto(ancho, alto, ruido) {
+    const c = document.createElement('canvas');
+    c.width = ancho; c.height = alto;
+    const x = c.getContext('2d');
+    if (ruido) {
+        const datos = x.createImageData(ancho, alto);
+        for (let i = 0; i < datos.data.length; i++) datos.data[i] = (i % 4 === 3) ? 255 : (Math.random() * 255) | 0;
+        x.putImageData(datos, 0, 0);
+    } else {
+        x.fillStyle = '#c33'; x.fillRect(0, 0, ancho, alto);
+    }
+    return c;
+}
+const aArchivo = (c, tipo, nombre, calidad) => new Promise(r => c.toBlob(b => r(new File([b], nombre, { type: tipo })), tipo, calidad));
+document.getElementById('sitio').addEventListener('load', async () => { try {
+    await esperar(600);
+    const w = document.getElementById('sitio').contentWindow, d = w.document;
+    const r = {};
+    const camara = d.getElementById('gmgChatCameraInput');
+    r.capture = camara ? camara.getAttribute('capture') : null;
+    r.galeriaSinCapture = !d.getElementById('gmgChatFileInput').hasAttribute('capture');
+    // "Tomar foto" abre el campo de cámara (se espía el clic: en un navegador sin ventana no hay cámara).
+    let abrioCamara = false;
+    camara.click = () => { abrioCamara = true; };
+    d.getElementById('gmgChatToggle').click();
+    d.querySelector('.gmg-chip[data-action="upload"]').click();
+    r.chipAbreCamara = abrioCamara;
+
+    // Foto grande (3000 x 2250 con ruido, más de 4 MB) y una chica.
+    // Imagen lisa de 3000 x 2250 con relleno al final: pesa más de 4 MB como una foto de celular y el navegador la abre igual.
+    const base = await aArchivo(lienzoFoto(3000, 2250, false), 'image/png', 'IMG_0001.png');
+    const grande = new File([base, new Uint8Array(4.5 * 1024 * 1024)], 'IMG_0001.png', { type: 'image/png' });
+    const chica = await aArchivo(lienzoFoto(400, 300, false), 'image/jpeg', 'chica.jpg', 0.9);
+    r.pesoGrandeMB = Math.round(grande.size / 1048576 * 10) / 10;
+    const dt = new w.DataTransfer();
+    dt.items.add(grande);
+    camara.files = dt.files;
+    camara.dispatchEvent(new w.Event('change'));
+    await esperar(2500);
+    const dt2 = new w.DataTransfer();
+    [chica, chica, chica].forEach(f => dt2.items.add(f));
+    const galeria = d.getElementById('gmgChatFileInput');
+    galeria.files = dt2.files;
+    galeria.dispatchEvent(new w.Event('change'));
+    await esperar(1000);
+    r.miniaturas = d.querySelectorAll('.gmg-chat-preview-item').length;
+    r.aviso = (d.getElementById('gmgChatAviso') || {}).textContent || '';
+
+    // Se intercepta el envío para ver qué fotos llegarían al servidor.
+    let enviadas = null;
+    w.fetch = async (url, opciones) => {
+        if (String(url).includes('chat.php')) {
+            enviadas = opciones.body.getAll('images[]');
+            return new Response(JSON.stringify({ status: 'success', reply: 'ok', products: [] }), { headers: { 'Content-Type': 'application/json' } });
+        }
+        return fetch(url, opciones);
+    };
+    d.getElementById('gmgChatInput').value = '¿Qué pieza es esta?';
+    d.getElementById('gmgChatSend').click();
+    await esperar(800);
+    r.enviadas = [];
+    for (const f of (enviadas || [])) {
+        const medida = await new Promise(res => { const im = new Image(); im.onload = () => res([im.naturalWidth, im.naturalHeight]); im.onerror = () => res([0, 0]); im.src = URL.createObjectURL(f); });
+        r.enviadas.push({ tipo: f.type, kb: Math.round(f.size / 1024), ancho: medida[0], alto: medida[1], nombre: f.name });
+    }
+    document.getElementById('resultado').textContent = JSON.stringify(r);
+} catch (error) { document.getElementById('resultado').textContent = JSON.stringify({ error: String(error && error.stack || error) }); } });
+</script>
+</body>
+</html>

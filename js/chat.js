@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('gmgChatInput');
     const chatSendBtn = document.getElementById('gmgChatSend');
     const chatFileInput = document.getElementById('gmgChatFileInput');
+    const chatCameraInput = document.getElementById('gmgChatCameraInput'); // cámara del celular
     const chatFileBtn = document.getElementById('gmgChatFileBtn');
     const chatMicBtn = document.getElementById('gmgChatMicBtn');
     const previewBar = document.getElementById('gmgChatPreviewBar');
@@ -178,34 +179,65 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (chatFileInput) {
-        chatFileInput.addEventListener('change', (e) => {
-            const files = Array.from(e.target.files || []);
-            let agregadas = 0;
-            let rechazadasPorTipo = false;
-
-            files.forEach(file => {
-                if (currentSelectedFiles.length >= MAX_IMAGENES) return;
-                // Lo mismo que revisa el servidor (F1-8): JPG, PNG o WebP de hasta 4 MB.
-                if (!TIPOS_IMAGEN.includes(file.type) || file.size > MAX_BYTES_IMAGEN) {
-                    rechazadasPorTipo = true;
-                    return;
-                }
-                currentSelectedFiles.push({ file, dataUrl: null });
-                agregadas++;
-            });
-
-            if (rechazadasPorTipo) {
-                mostrarAvisoChat('Solo puedes adjuntar fotos JPG, PNG o WebP de hasta 4 MB.');
-            }
-            if (files.length > agregadas && !rechazadasPorTipo) {
-                mostrarAvisoChat('Puedes adjuntar un máximo de ' + MAX_IMAGENES + ' fotos por mensaje.');
-            }
-
-            chatFileInput.value = '';
-            renderPreviewList();
+    // Las fotos del celular pesan 3 a 8 MB y el servidor acepta hasta 4 MB (F1-8): antes de adjuntarlas
+    // se reducen a 1600 px por lado en JPEG (unos cientos de KB, suben rápido con datos móviles).
+    // Una foto chica se deja tal cual. (Con accept de JPG, PNG y WebP, el iPhone ya entrega sus fotos en JPEG.)
+    const LADO_MAXIMO = 1600;
+    function reducirFoto(file) {
+        const yaSirve = TIPOS_IMAGEN.includes(file.type) && file.size <= 1.5 * 1024 * 1024;
+        if (yaSirve) return Promise.resolve(file);
+        return new Promise((resolver) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                const escala = Math.min(1, LADO_MAXIMO / Math.max(img.naturalWidth, img.naturalHeight));
+                const lienzo = document.createElement('canvas');
+                lienzo.width = Math.round(img.naturalWidth * escala);
+                lienzo.height = Math.round(img.naturalHeight * escala);
+                lienzo.getContext('2d').drawImage(img, 0, 0, lienzo.width, lienzo.height);
+                URL.revokeObjectURL(url);
+                lienzo.toBlob((blob) => {
+                    resolver(blob ? new File([blob], (file.name || 'foto').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : null);
+                }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); resolver(null); }; // formato que el navegador no puede abrir
+            img.src = url;
         });
     }
+
+    async function agregarFotos(input) {
+        const files = Array.from(input.files || []);
+        input.value = '';
+        let agregadas = 0;
+        let tipoInvalido = false;
+        let noSeAbrio = false;
+        for (const original of files) {
+            if (currentSelectedFiles.length >= MAX_IMAGENES) break;
+            // Lo mismo que revisa el servidor (F1-8): solo JPG, PNG o WebP, y de hasta 4 MB después de reducirla.
+            if (!TIPOS_IMAGEN.includes(original.type)) {
+                tipoInvalido = true;
+                continue;
+            }
+            const file = await reducirFoto(original);
+            if (!file || file.size > MAX_BYTES_IMAGEN) {
+                noSeAbrio = true;
+                continue;
+            }
+            currentSelectedFiles.push({ file, dataUrl: null });
+            agregadas++;
+        }
+        if (tipoInvalido) {
+            mostrarAvisoChat('Solo puedes adjuntar fotos JPG, PNG o WebP.');
+        } else if (noSeAbrio) {
+            mostrarAvisoChat('No pudimos abrir esa foto. Prueba con otra o sácala de nuevo.');
+        } else if (files.length > agregadas) {
+            mostrarAvisoChat('Puedes adjuntar un máximo de ' + MAX_IMAGENES + ' fotos por mensaje.');
+        }
+        renderPreviewList();
+    }
+
+    if (chatFileInput) chatFileInput.addEventListener('change', () => agregarFotos(chatFileInput));
+    if (chatCameraInput) chatCameraInput.addEventListener('change', () => agregarFotos(chatCameraInput));
 
     function renderPreviewList() {
         if (!previewList) return;
@@ -265,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const promptText = chip.getAttribute('data-prompt');
             if (promptText) {
                 if (chip.getAttribute('data-action') === 'upload') {
-                    chatFileInput.click();
+                    (chatCameraInput || chatFileInput).click(); // en el celular abre la cámara
                 } else {
                     // Los botones con data-atajo (Buscar repuesto, Despacho, Medios de pago)
                     // reciben una respuesta inmediata con la información configurada.

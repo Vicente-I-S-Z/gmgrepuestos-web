@@ -86,7 +86,7 @@ try {
     echo "\n== Fotos adjuntas en el navegador (F1-8) ==\n";
     revisar($r['acceptFotos'] === 'image/jpeg,image/png,image/webp', 'el selector ofrece solo JPG, PNG y WebP', (string)$r['acceptFotos']);
     revisar($r['gifRechazado'] === true, 'un GIF no se adjunta y se avisa por qué');
-    revisar($r['grandeRechazada'] === true, 'una foto de más de 4 MB no se adjunta');
+    revisar($r['grandeRechazada'] === true, 'un archivo de más de 4 MB que no es una imagen real no se adjunta (las fotos grandes reales se reducen: chat_camara_test)');
     revisar($r['pngAceptado'] === true, 'un PNG válido sí se adjunta');
 
     ejecutar(array_merge($base, ['--virtual-time-budget=5000', '--window-size=360,760', "--screenshot=$captura", 'http://localhost:8091/tests/chat_tarjetas_prueba.html?captura=1']));

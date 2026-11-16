@@ -73,7 +73,7 @@ $whatsappMensaje = $whatsappMensaje ?? 'Hola, necesito ayuda con un repuesto';
             <button type="button" class="gmg-chip" data-atajo="buscar" data-prompt="Buscar repuesto">🔍 Buscar repuesto</button>
             <button type="button" class="gmg-chip" data-atajo="despacho" data-prompt="Despacho">🚚 Despacho</button>
             <button type="button" class="gmg-chip" data-atajo="pagos" data-prompt="Medios de pago">💳 Medios de pago</button>
-            <button type="button" class="gmg-chip" data-action="upload" data-prompt="Subir foto">📸 Enviar foto</button>
+            <button type="button" class="gmg-chip" data-action="upload" data-prompt="Tomar foto">📸 Tomar foto</button>
         </div>
 
         <div id="gmgChatPreviewBar" class="gmg-chat-image-preview-bar">
@@ -81,11 +81,14 @@ $whatsappMensaje = $whatsappMensaje ?? 'Hola, necesito ayuda con un repuesto';
         </div>
 
         <div class="gmg-chat-footer">
-            <input type="file" id="gmgChatFileInput" aria-label="Elegir fotos de la pieza (hasta 3)" accept="image/jpeg,image/png,image/webp" multiple style="display: none;">
-            <button type="button" id="gmgChatFileBtn" class="gmg-chat-file-btn" title="Adjuntar hasta 3 fotos de la pieza" aria-label="Adjuntar fotos de la pieza">
+            <input type="file" id="gmgChatFileInput" aria-label="Elegir fotos de la pieza desde la galería (hasta 3)" accept="image/jpeg,image/png,image/webp" multiple style="display: none;">
+            <!-- Cámara del celular (capture): abre la cámara trasera para fotografiar la pieza; en el computador abre el selector de archivos -->
+            <input type="file" id="gmgChatCameraInput" aria-label="Tomar una foto de la pieza con la cámara" accept="image/jpeg,image/png,image/webp" capture="environment" style="display: none;">
+            <button type="button" id="gmgChatFileBtn" class="gmg-chat-file-btn" title="Adjuntar fotos desde la galería (hasta 3)" aria-label="Adjuntar fotos desde la galería">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
             </button>
             <button type="button" id="gmgChatMicBtn" class="gmg-chat-file-btn gmg-chat-mic-btn" title="Consultar por voz" aria-label="Consultar por voz" style="display:none;">
