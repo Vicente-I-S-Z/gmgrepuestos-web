@@ -52,6 +52,7 @@ function gmgAdminEnlaces($activo = '') {
         'banners'   => ['banners.php', 'Banners'],
         'reportes'  => ['reportes.php', 'Reportes'],
         'usuarios'  => ['usuarios.php', 'Usuarios'],
+        'correo'    => ['correo_prueba.php', 'Correo'],
     ];
     // El rol vendedor solo ve estas pantallas (F4-10, E1-H7).
     $deVendedor = ['dashboard', 'productos', 'pedidos', 'avisos'];

@@ -37,7 +37,11 @@ function gmgFotosDeRepuesto($conexion, $idRepuesto) {
 
 /** Frase para el aviso del panel cuando se enviaron correos de reposición (F3-9). */
 function gmgTextoAvisosEnviados($enviados) {
-    return $enviados > 0 ? ' Se avisó por correo a ' . $enviados . ($enviados === 1 ? ' cliente' : ' clientes') . ' que esperaba' . ($enviados === 1 ? '' : 'n') . ' este repuesto.' : '';
+    $texto = $enviados > 0 ? ' Se avisó por correo a ' . $enviados . ($enviados === 1 ? ' cliente' : ' clientes') . ' que esperaba' . ($enviados === 1 ? '' : 'n') . ' este repuesto.' : '';
+    if (gmgErrorCorreo() !== '') { // antes el error se callaba y "no pasaba nada"
+        $texto .= ' Ojo: no se pudo enviar el aviso de stock por correo (revisa Panel > Correo).';
+    }
+    return $texto;
 }
 
 /** Texto de un campo del formulario ('' si no viene o llega como arreglo). */

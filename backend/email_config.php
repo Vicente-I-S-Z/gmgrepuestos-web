@@ -25,8 +25,9 @@ require_once __DIR__ . '/entorno.php';
 //      Usuario: la casilla completa, ej. avisos@gmgrepuestos.cl
 //      Clave:   la contraseña de esa casilla de correo (NO tu clave de hPanel)
 define('SMTP_HOST', gmgEnv('SMTP_HOST', 'smtp.hostinger.com'));
-define('SMTP_PORT', 465);
-define('SMTP_SECURE', 'ssl'); // 'ssl' para puerto 465, 'tls' para puerto 587
+// Por defecto 465 con SSL. Si Hostinger o la red bloquean el 465, en el .env: SMTP_PORT=587 y SMTP_SECURE=tls.
+define('SMTP_PORT', (int)gmgEnv('SMTP_PORT', '465'));
+define('SMTP_SECURE', in_array(gmgEnv('SMTP_SECURE', 'ssl'), ['ssl', 'tls'], true) ? gmgEnv('SMTP_SECURE', 'ssl') : 'ssl');
 define('SMTP_USER', gmgEnv('SMTP_USER', ''));
 define('SMTP_PASS', gmgEnv('SMTP_PASS', ''));
 

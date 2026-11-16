@@ -36,12 +36,29 @@ function emailEnviar($destinatarioEmail, $destinatarioNombre, $asunto, $htmlBody
     if (empty($destinatarioEmail) || !filter_var($destinatarioEmail, FILTER_VALIDATE_EMAIL)) {
         return ['success' => false, 'error' => 'Correo de destino inválido o vacío'];
     }
+    // El remitente es la misma casilla con que se inicia sesión en el SMTP: Hostinger rechaza enviar
+    // "desde" otra dirección (antes era Ventas@ fijo aunque SMTP_USER fuera otra casilla).
+    $remitente = filter_var(SMTP_USER, FILTER_VALIDATE_EMAIL) ? SMTP_USER : SMTP_FROM_EMAIL;
     try {
         $mailer = new SmtpMailer(SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS);
-        return $mailer->enviar($destinatarioEmail, $destinatarioNombre, $asunto, $htmlBody, SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+        $resultado = $mailer->enviar($destinatarioEmail, $destinatarioNombre, $asunto, $htmlBody, $remitente, SMTP_FROM_NAME);
     } catch (Exception $e) {
-        return ['success' => false, 'error' => $e->getMessage()];
+        $resultado = ['success' => false, 'error' => $e->getMessage()];
     }
+    if (empty($resultado['success'])) {
+        error_log('[GMG Correo] No se pudo enviar "' . $asunto . '": ' . ($resultado['error'] ?? 'sin detalle'));
+        gmgErrorCorreo((string)($resultado['error'] ?? 'sin detalle'));
+    }
+    return $resultado;
+}
+
+/** Último error del servidor de correo en esta petición ('' si no hubo): el panel lo muestra en vez de callarlo. */
+function gmgErrorCorreo($nuevo = null) {
+    static $ultimo = '';
+    if ($nuevo !== null) {
+        $ultimo = $nuevo;
+    }
+    return $ultimo;
 }
 
 /**

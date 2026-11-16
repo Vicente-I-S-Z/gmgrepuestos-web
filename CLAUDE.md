@@ -50,6 +50,7 @@ Fecha de término del proyecto: 18-12-2026.
 - Fase 3 y 4 (todas terminan en "TODO OK"): `login_seguro_test` (F3-1), `limites_ip_test` (F3-3), `sql_preparado_test` (F3-4), `csp_test` (F3-5, Edge), `whatsapp_test` (F3-6, Edge), `privacidad_chat_test` (F3-7), `config_chatbot_test` (F3-8), `reposicion_test` (F3-9), `busquedas_vacias_test` (F3-10), `aviso_stock_test` (F3-11, Edge), `seo_test` (F4-1), `filtros_test` (F4-4), `accesibilidad_test` (F4-8, Edge): `php tests/<nombre>.php`
 - Fase 3 y 4, segunda parte: `cuentas_test` (F3-2 y F4-10), `chat_pedido_test` (F3-12), `pedido_correos_test` (F4-6), `importar_csv_test` (F4-5), `analitica_test` (F4-3, Edge), `auditoria_publica_test` (mi pedido y feedback); F4-2 (URLs legibles) se prueba en `cp47_htaccess.sh`
 - Foto con la cámara del celular en el chat (capture y reducción a 1600 px, Edge): `php tests/chat_camara_test.php`
+- Correos (SMTP falso `tests/fake_smtp.php`, remitente, base64, errores visibles en el panel y pantalla Correo): `php tests/correo_test.php`
 - Prueba de carga (F5-2, no es automática): `k6 run -e SITIO=https://gmgrepuestos.cl tests/k6/carga.js`
 - Paquete para Hostinger: `dist/subida_final/` (se rearma copiando todo menos `.claude`, `CLAUDE.md`, `docs`, `BD_v2`, `arquitectura`, `tests`, `.git`, `.env*`, `.git*`, `dist` y `skills-lock.json`); guía para subirlo y para todo lo que hace una persona: `docs/GUIA_HOSTINGER_PASO_A_PASO.md`
 - Skills instaladas en `.claude/skills/` (Ponytail y Emil Kowalski) con `npx skills add`; `skills-lock.json` permite reinstalarlas

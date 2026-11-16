@@ -30,9 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !gmgCsrfValido()) {
             // Aviso al cliente: el administrador cambió el estado de su
             // pedido manualmente. Si el correo falla, no debe interrumpir
             // el panel, por eso se ignora silenciosamente cualquier error.
-            enviarCorreoActualizacionPedido($conexion, $id, $nuevoEstado);
+            $correo = enviarCorreoActualizacionPedido($conexion, $id, $nuevoEstado);
+            if (!empty($correo['success'])) {
+                $mensaje .= ' Se avisó al cliente por correo.';
+            }
             if ($nuevoEstado === 'aprobado') {
                 enviarCorreoPedidoAprobadoInterno($conexion, $id); // aviso interno para coordinar la entrega (F4-6)
+            }
+            if (gmgErrorCorreo() !== '') { // antes el error se callaba y "no pasaba nada"
+                $mensaje .= ' Ojo: no se pudo enviar el correo (revisa Panel > Correo).';
             }
         }
     }

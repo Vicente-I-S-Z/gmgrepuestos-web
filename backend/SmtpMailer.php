@@ -124,9 +124,10 @@ class SmtpMailer {
         $headers[] = "Message-ID: {$messageId}";
         $headers[] = "MIME-Version: 1.0";
         $headers[] = "Content-Type: text/html; charset=UTF-8";
-        $headers[] = "Content-Transfer-Encoding: 8bit";
+        // base64 en líneas de 76: con 8bit, una línea de más de 998 caracteres hace que el servidor rechace o corte el correo.
+        $headers[] = "Content-Transfer-Encoding: base64";
 
-        return implode("\r\n", $headers) . "\r\n\r\n" . $htmlBody;
+        return implode("\r\n", $headers) . "\r\n\r\n" . rtrim(chunk_split(base64_encode($htmlBody), 76, "\r\n"));
     }
 }
 ?>

@@ -13,6 +13,7 @@ requerirRolAdmin('../');
 require_once '../backend/admin_ui.php';
 require_once '../backend/datos.php';
 require_once '../backend/auditoria.php';
+require_once '../backend/email_helpers.php';
 
 const GMG_CSV_COLUMNAS = ['sku', 'categoria', 'nombre', 'vehiculos_compatibles', 'n_vehiculos', 'precio_referencial_clp', 'stock', 'codigo_oem'];
 const GMG_CSV_MAX_BYTES = 2 * 1024 * 1024;
@@ -162,6 +163,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     gmgAuditar($conexion, 'catalogo_importado', 'repuesto', null, 'Importación CSV: ' . $resumen['nuevos'] . ' nuevos y ' . $resumen['actualizados'] . ' actualizados');
                     $mensaje = 'Importación lista: ' . $resumen['nuevos'] . ' repuestos nuevos y ' . $resumen['actualizados'] . ' actualizados.';
+                    // Los que volvieron a tener stock avisan a quienes lo pidieron (F3-9; antes solo desde Productos).
+                    $avisados = 0;
+                    foreach ($filas as $fila) {
+                        if ($fila['stock'] > 0) {
+                            $avisados += gmgNotificarReposicion($conexion, $ids[$fila['sku']]);
+                        }
+                    }
+                    if ($avisados > 0) {
+                        $mensaje .= ' Se avisó por correo a ' . $avisados . ' cliente' . ($avisados === 1 ? '' : 's') . ' que esperaba' . ($avisados === 1 ? '' : 'n') . ' repuestos sin stock.';
+                    }
+                    if (gmgErrorCorreo() !== '') {
+                        $mensaje .= ' Ojo: no se pudieron enviar los avisos por correo (revisa Panel > Correo).';
+                    }
                     $tipoMensaje = 'exito';
                 } else {
                     $conexion->rollback();
